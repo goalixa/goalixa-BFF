@@ -1,0 +1,151 @@
+---
+# API Gateway Configuration with BFF
+# This should replace or be merged with the existing api.goalixa.com configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: goalixa-api
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        # Rate limiting zone
+        limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+
+        # Upstream services
+        upstream bff_service {
+            server goalixa-bff.goalixa-bff.svc.cluster.local:8000;
+            keepalive 32;
+        }
+
+        upstream auth_service {
+            server goalixa-auth.goalixa-auth.svc.cluster.local:5001;
+            keepalive 32;
+        }
+
+        upstream app_service {
+            server goalixa-app.goalixa-app.svc.cluster.local:80;
+            keepalive 32;
+        }
+
+        upstream landing_service {
+            server goalixa-landing.goalixa-landing.svc.cluster.local:80;
+            keepalive 16;
+        }
+
+        server {
+            listen 8080;
+            server_name api.goalixa.com;
+
+            # Security headers
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
+            # CORS headers
+            add_header Access-Control-Allow-Origin "https://pwa.goalixa.com" always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With" always;
+            add_header Access-Control-Allow-Credentials "true" always;
+            add_header Access-Control-Max-Age "86400" always;
+
+            # Handle preflight requests
+            if ($request_method = 'OPTIONS') {
+                return 204;
+            }
+
+            # BFF routes - New unified API layer
+            location /bff/ {
+                limit_req zone=api_limit burst=20 nodelay;
+
+                proxy_pass http://bff_service;
+                proxy_http_version 1.1;
+
+                # Headers
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+
+                # Timeouts
+                proxy_connect_timeout 10s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+
+                # Keepalive
+                proxy_set_header Connection "";
+            }
+
+            # Auth routes - Still accessible for legacy/other clients
+            location /auth/ {
+                limit_req zone=api_limit burst=20 nodelay;
+
+                proxy_pass http://auth_service;
+                proxy_http_version 1.1;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header Connection "";
+
+                proxy_connect_timeout 10s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+            }
+
+            # App routes - Direct access still available
+            location /app/ {
+                limit_req zone=api_limit burst=20 nodelay;
+
+                proxy_pass http://app_service;
+                proxy_http_version 1.1;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header Connection "";
+
+                proxy_connect_timeout 10s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+            }
+
+            # Landing routes
+            location /landing/ {
+                proxy_pass http://landing_service;
+                proxy_http_version 1.1;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header Connection "";
+            }
+
+            # Health check endpoint
+            location /health {
+                return 200 "OK\n";
+                add_header Content-Type text/plain;
+            }
+
+            # BFF metrics endpoint (secured, only for Prometheus)
+            location /bff/metrics {
+                # Allow only from Prometheus pod IPs
+                # allow 10.244.0.0/16;
+                # deny all;
+
+                proxy_pass http://bff_service/metrics;
+                proxy_http_version 1.1;
+
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }
+        }
+    }

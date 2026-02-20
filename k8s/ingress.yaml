@@ -1,0 +1,39 @@
+---
+# BFF Ingress Configuration
+# Update with your domain and ingress controller settings
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bff-ingress
+  namespace: bff-service
+  annotations:
+    # Update annotations based on your ingress controller
+    # For Traefik:
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # traefik.ingress.kubernetes.io/router.tls: "true"
+    # traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+
+    # For NGINX:
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Example middleware (remove if not using Traefik)
+    # traefik.ingress.kubernetes.io/router.middlewares: bff-redirect-scheme@kubernetescrd
+spec:
+  # Update ingressClassName based on your setup (traefik, nginx, etc.)
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - api.yourdomain.com  # Update with your domain
+    secretName: bff-tls  # TLS certificate secret
+  rules:
+  - host: api.yourdomain.com  # Update with your domain
+    http:
+      paths:
+      - path: /bff
+        pathType: Prefix
+        backend:
+          service:
+            name: bff-service
+            port:
+              number: 8000

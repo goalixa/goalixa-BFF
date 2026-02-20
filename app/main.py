@@ -1,0 +1,204 @@
+"""
+Goalixa BFF - Backend for Frontend
+A unified API layer for the Goalixa PWA
+"""
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+import httpx
+import logging
+from prometheus_client import Counter, Histogram, generate_latest
+from fastapi import Response
+import time
+
+from app.config import settings
+from app.routers import auth, app_router, health, aggregate
+from app.middleware.auth_middleware import AuthMiddleware
+from app.middleware.logging_middleware import LoggingMiddleware
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Prometheus Metrics
+REQUEST_COUNT = Counter(
+    'bff_request_count',
+    'Total request count',
+    ['method', 'endpoint', 'status']
+)
+REQUEST_DURATION = Histogram(
+    'bff_request_duration_seconds',
+    'Request duration',
+    ['method', 'endpoint']
+)
+
+# HTTP Async Client for backend services
+http_client = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events"""
+    global http_client
+
+    # Startup
+    logger.info("Starting Goalixa BFF...")
+
+    # Initialize HTTP client with connection pooling
+    limits = httpx.Limits(
+        max_keepalive_connections=50,
+        max_connections=100,
+        keepalive_expiry=30.0
+    )
+    timeout = httpx.Timeout(30.0, connect=10.0)
+
+    http_client = httpx.AsyncClient(
+        limits=limits,
+        timeout=timeout,
+        verify=False  # In development, set to True in production with proper certs
+    )
+
+    logger.info(f"BFF connected to auth service at {settings.auth_service_url}")
+    logger.info(f"BFF connected to app service at {settings.app_service_url}")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down Goalixa BFF...")
+    await http_client.aclose()
+    logger.info("BFF shutdown complete")
+
+
+# Create FastAPI app
+app = FastAPI(
+    title="Goalixa BFF",
+    description="Backend for Frontend - Unified API layer for Goalixa PWA",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan
+)
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+# GZip Middleware for response compression
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Custom Middlewares
+app.add_middleware(AuthMiddleware, http_client=http_client)
+app.add_middleware(LoggingMiddleware)
+
+# Include routers
+app.include_router(health.router, tags=["Health"])
+app.include_router(auth.router, prefix="/bff/auth", tags=["Auth"])
+app.include_router(app_router.router, prefix="/bff/app", tags=["App"])
+app.include_router(aggregate.router, prefix="/bff/aggregate", tags=["Aggregate"])
+
+# Metrics endpoint for Prometheus scraping
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(content=generate_latest(), media_type="text/plain")
+
+
+@app.get("/")
+async def root():
+    """Root endpoint with BFF information"""
+    return {
+        "service": "Goalixa BFF",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "docs": "/docs",
+            "auth": "/bff/auth/*",
+            "app": "/bff/app/*",
+            "aggregate": "/bff/aggregate/*",
+            "metrics": "/metrics"
+        }
+    }
+
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler for unhandled errors"""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+
+    REQUEST_COUNT.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        status=500
+    ).inc()
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Internal server error",
+            "message": "An unexpected error occurred. Please try again later.",
+            "detail": str(exc) if settings.debug else None
+        }
+    )
+
+
+# Request metrics middleware
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Middleware to collect request metrics"""
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    # Record metrics
+    duration = time.time() - start_time
+    REQUEST_DURATION.labels(
+        method=request.method,
+        endpoint=request.url.path
+    ).observe(duration)
+
+    REQUEST_COUNT.labels(
+        method=request.method,
+        endpoint=request.url.path,
+        status=response.status_code
+    ).inc()
+
+    return response
+
+
+# Startup event for additional initialization
+@app.on_event("startup")
+async def startup_event():
+    """Additional startup tasks"""
+    logger.info("Goalixa BFF is ready to accept requests")
+
+
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Additional cleanup tasks"""
+    logger.info("Goalixa BFF shutdown complete")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )

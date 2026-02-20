@@ -1,0 +1,42 @@
+# BFF Docker Compose for Local Development
+version: '3.8'
+
+services:
+  bff:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bff-service
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      # Update with your actual service URLs
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - APP_SERVICE_URL=http://app-service:5000
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_ENABLED=true
+      - SECURE_COOKIES=false
+      - COOKIE_DOMAIN=localhost
+      - LOG_LEVEL=INFO
+      - JWT_SECRET=development-secret-key-change-in-production
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - bff-network
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: bff-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - bff-network
+
+networks:
+  bff-network:
+    driver: bridge
