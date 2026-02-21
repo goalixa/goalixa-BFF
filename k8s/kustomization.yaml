@@ -1,16 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: goalixa-api
+namespace: goalixa-bff
 
 resources:
   - api-gateway-configmap.yaml
   - deployment.yaml
-  - ingress.yaml
 
 images:
   - name: YOUR_REGISTRY/bff-service
-    newName: harbor.goalixa.com/goalixa-bff/api-gateway
+    newName: harbor.goalixa.com/goalixa-bff/bff
     newTag: latest  # Change this to specific commit SHA for each deployment
 
 # Secret is managed separately - create using kubectl create secret generic

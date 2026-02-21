@@ -6,10 +6,18 @@ from fastapi.responses import JSONResponse
 import httpx
 import logging
 
-from app.config import settings, service_urls
+from app.config import service_urls
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _forward_set_cookie_headers(source_response: httpx.Response, target_response: JSONResponse) -> None:
+    """
+    Forward all Set-Cookie headers from upstream auth response without mutation.
+    """
+    for cookie_header in source_response.headers.get_list("set-cookie"):
+        target_response.headers.append("set-cookie", cookie_header)
 
 
 @router.post("/login")
@@ -35,16 +43,7 @@ async def login(request: Request):
             content=auth_response.json() if auth_response.status_code != 204 else None
         )
 
-        # Forward Set-Cookie headers
-        for cookie in auth_response.cookies:
-            response.set_cookie(
-                key=cookie.name,
-                value=cookie.value,
-                domain=settings.cookie_domain if settings.secure_cookies else None,
-                secure=settings.secure_cookies,
-                httponly=True,
-                samesite='lax'
-            )
+        _forward_set_cookie_headers(auth_response, response)
 
         logger.info(f"Login request processed: {auth_response.status_code}")
         return response
@@ -76,16 +75,7 @@ async def register(request: Request):
             content=auth_response.json() if auth_response.status_code != 204 else None
         )
 
-        # Forward Set-Cookie headers
-        for cookie in auth_response.cookies:
-            response.set_cookie(
-                key=cookie.name,
-                value=cookie.value,
-                domain=settings.cookie_domain if settings.secure_cookies else None,
-                secure=settings.secure_cookies,
-                httponly=True,
-                samesite='lax'
-            )
+        _forward_set_cookie_headers(auth_response, response)
 
         logger.info(f"Registration request processed: {auth_response.status_code}")
         return response
@@ -119,13 +109,7 @@ async def logout(request: Request):
             content=auth_response.json() if auth_response.status_code != 204 else None
         )
 
-        # Clear cookies
-        for cookie_name in ['access_token_cookie', 'refresh_token_cookie']:
-            response.delete_cookie(
-                key=cookie_name,
-                domain=settings.cookie_domain if settings.secure_cookies else None,
-                path='/'
-            )
+        _forward_set_cookie_headers(auth_response, response)
 
         logger.info("Logout request processed")
         return response
@@ -159,16 +143,7 @@ async def refresh(request: Request):
             content=auth_response.json() if auth_response.status_code != 204 else None
         )
 
-        # Forward Set-Cookie headers
-        for cookie in auth_response.cookies:
-            response.set_cookie(
-                key=cookie.name,
-                value=cookie.value,
-                domain=settings.cookie_domain if settings.secure_cookies else None,
-                secure=settings.secure_cookies,
-                httponly=True,
-                samesite='lax'
-            )
+        _forward_set_cookie_headers(auth_response, response)
 
         logger.info("Token refresh request processed")
         return response
