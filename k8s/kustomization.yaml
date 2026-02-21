@@ -13,9 +13,4 @@ images:
     newName: harbor.goalixa.com/goalixa-bff/api-gateway
     newTag: latest  # Change this to specific commit SHA for each deployment
 
-commonLabels:
-  app.kubernetes.io/name: api-gateway
-  app.kubernetes.io/component: api-gateway
-  app.kubernetes.io/part-of: goalixa
-
 # Secret is managed separately - create using kubectl create secret generic
