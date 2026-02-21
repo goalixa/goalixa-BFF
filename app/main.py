@@ -20,7 +20,7 @@ from app.middleware.logging_middleware import LoggingMiddleware
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
     http_client = httpx.AsyncClient(
         limits=limits,
         timeout=timeout,
-        verify=False  # In development, set to True in production with proper certs
+        verify=settings.http_verify_tls
     )
 
     logger.info(f"BFF connected to auth service at {settings.auth_service_url}")

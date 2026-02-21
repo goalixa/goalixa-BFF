@@ -4,8 +4,8 @@ kind: Kustomization
 namespace: goalixa-bff
 
 resources:
-  - api-gateway-configmap.yaml
   - deployment.yaml
+  # Keep API gateway nginx config under /k8s/api to avoid namespace drift.
 
 images:
   - name: YOUR_REGISTRY/bff-service

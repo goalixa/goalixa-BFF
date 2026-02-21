@@ -18,17 +18,17 @@ data:
 
         # Upstream services
         upstream bff_service {
-            server goalixa-bff.goalixa-bff.svc.cluster.local:8000;
+            server bff-service.goalixa-bff.svc.cluster.local:8000;
             keepalive 32;
         }
 
         upstream auth_service {
-            server goalixa-auth.goalixa-auth.svc.cluster.local:5001;
+            server auth.goalixa-auth.svc.cluster.local:80;
             keepalive 32;
         }
 
         upstream app_service {
-            server goalixa-app.goalixa-app.svc.cluster.local:80;
+            server goalixa.goalixa-app.svc.cluster.local:80;
             keepalive 32;
         }
 
@@ -85,6 +85,7 @@ data:
             location /auth/ {
                 limit_req zone=api_limit burst=20 nodelay;
 
+                rewrite ^/auth/(.*)$ /api/$1 break;
                 proxy_pass http://auth_service;
                 proxy_http_version 1.1;
 
@@ -103,6 +104,7 @@ data:
             location /app/ {
                 limit_req zone=api_limit burst=20 nodelay;
 
+                rewrite ^/app/(.*)$ /api/$1 break;
                 proxy_pass http://app_service;
                 proxy_http_version 1.1;
 

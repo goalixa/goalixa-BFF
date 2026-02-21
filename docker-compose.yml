@@ -15,10 +15,13 @@ services:
       # Update with your actual service URLs
       - AUTH_SERVICE_URL=http://auth-service:5001
       - APP_SERVICE_URL=http://app-service:5000
+      - AUTH_API_PREFIX=/api
+      - APP_API_PREFIX=/api
       - REDIS_URL=redis://redis:6379/0
       - REDIS_ENABLED=true
       - SECURE_COOKIES=false
       - COOKIE_DOMAIN=localhost
+      - HTTP_VERIFY_TLS=true
       - LOG_LEVEL=INFO
       - JWT_SECRET=development-secret-key-change-in-production
     volumes:

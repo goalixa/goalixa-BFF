@@ -190,6 +190,8 @@ See `.env.example` for all available configuration options.
 Key variables:
 - `AUTH_SERVICE_URL` - Auth service URL
 - `APP_SERVICE_URL` - App service URL
+- `AUTH_API_PREFIX` - Auth API path prefix (default: `/api`)
+- `APP_API_PREFIX` - App API path prefix (default: `/api`)
 - `REDIS_URL` - Redis connection string
 - `JWT_SECRET` - Secret for JWT validation
 - `CORS_ORIGINS` - Allowed CORS origins
