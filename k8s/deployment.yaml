@@ -3,20 +3,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bff-service
-  namespace: bff-service
+  name: api-gateway
+  namespace: goalixa-api
   labels:
-    app: bff-service
+    app.kubernetes.io/name: api-gateway
+    app: api-gateway
     version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: bff-service
+      app.kubernetes.io/name: api-gateway
   template:
     metadata:
       labels:
-        app: bff-service
+        app.kubernetes.io/name: api-gateway
+        app: api-gateway
         version: v1
       annotations:
         prometheus.io/scrape: "true"
