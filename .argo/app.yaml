@@ -16,7 +16,7 @@ spec:
     path: k8s
   destination:
     server: https://kubernetes.default.svc
-    namespace: goalixa-api
+    namespace: goalixa-bff
   syncPolicy:
     automated:
       prune: true
