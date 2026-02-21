@@ -18,7 +18,7 @@ services:
       - AUTH_API_PREFIX=/api
       - APP_API_PREFIX=/api
       - REDIS_URL=redis://redis:6379/0
-      - REDIS_ENABLED=true
+      - REDIS_ENABLED=false
       - SECURE_COOKIES=false
       - COOKIE_DOMAIN=localhost
       - HTTP_VERIFY_TLS=true
