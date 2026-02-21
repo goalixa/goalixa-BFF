@@ -7,7 +7,6 @@ resources:
   - api-gateway-configmap.yaml
   - deployment.yaml
   - ingress.yaml
-  - secrets.yaml
 
 images:
   - name: YOUR_REGISTRY/bff-service
@@ -18,3 +17,5 @@ commonLabels:
   app.kubernetes.io/name: api-gateway
   app.kubernetes.io/component: api-gateway
   app.kubernetes.io/part-of: goalixa
+
+# Secret is managed separately - create using kubectl create secret generic
