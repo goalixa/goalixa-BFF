@@ -39,9 +39,13 @@ spec:
         - name: DEBUG
           value: "false"
         - name: AUTH_SERVICE_URL
-          value: "http://goalixa-auth.goalixa-auth.svc.cluster.local:5001"
+          value: "http://auth.goalixa-auth.svc.cluster.local:80"
         - name: APP_SERVICE_URL
-          value: "http://goalixa-app.goalixa-app.svc.cluster.local:80"
+          value: "http://goalixa.goalixa-app.svc.cluster.local:80"
+        - name: AUTH_API_PREFIX
+          value: "/api"
+        - name: APP_API_PREFIX
+          value: "/api"
         - name: REDIS_URL
           value: "redis://redis-cluster.redis-cluster.svc.cluster.local:6379/0"
         - name: SECURE_COOKIES
@@ -59,7 +63,7 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /health/liveness
+            path: /liveness
             port: 8000
           initialDelaySeconds: 10
           periodSeconds: 30
@@ -67,7 +71,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health/readiness
+            path: /readiness
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -78,9 +82,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: bff-service
-  namespace: bff-service
+  namespace: goalixa-bff
   labels:
-    app: bff-service
+    app: bff
 spec:
   type: ClusterIP
   ports:
@@ -89,12 +93,12 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: bff-service
+    app.kubernetes.io/name: bff
 ---
 # Namespace
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: bff-service
+  name: goalixa-bff
   labels:
-    name: bff-service
+    name: goalixa-bff

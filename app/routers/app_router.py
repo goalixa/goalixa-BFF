@@ -1,15 +1,93 @@
 """
 App Router - Handles all app-related requests
 """
-from fastapi import APIRouter, Request, HTTPException, status
+from fastapi import APIRouter, Request, HTTPException, status, Response
 from fastapi.responses import JSONResponse
 import httpx
 import logging
+from typing import Optional
 
 from app.config import settings, service_urls
+from app.main import http_client as shared_http_client
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+async def forward_request(
+    request: Request,
+    service_url: str,
+    method: str = None
+):
+    """
+    Generic request forwarding function using shared HTTP client
+
+    Args:
+        request: The incoming request
+        service_url: The backend service URL
+        method: HTTP method (defaults to request method)
+
+    Returns:
+        JSONResponse from backend service
+    """
+    try:
+        method = method or request.method
+        body = await request.body() if method in ["POST", "PUT", "PATCH"] else None
+
+        # Build URL with query parameters
+        url = service_url
+        if request.url.query:
+            url += f"?{request.url.query}"
+
+        # Filter headers - remove host and content-length
+        headers = {
+            k: v for k, v in request.headers.items()
+            if k.lower() not in ['host', 'content-length']
+        }
+
+        # Use shared HTTP client from main app
+        if shared_http_client is None:
+            logger.error("Shared HTTP client not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service not properly initialized"
+            )
+
+        response = await shared_http_client.request(
+            method=method,
+            url=url,
+            content=body,
+            headers=headers,
+            cookies=request.cookies
+        )
+
+        # Handle empty responses
+        if response.status_code == 204:
+            return Response(status_code=204)
+
+        return JSONResponse(
+            status_code=response.status_code,
+            content=response.json()
+        )
+
+    except httpx.RequestError as e:
+        logger.error(f"App service connection error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="App service unavailable"
+        )
+    except httpx.HTTPStatusError as e:
+        logger.error(f"App service returned error status: {e.response.status_code}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=e.response.json() if e.response.headers.get("content-type", "").startswith("application/json") else str(e.response.text)
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in forward_request: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
 
 
 async def forward_request(

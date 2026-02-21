@@ -6,6 +6,22 @@ from typing import List
 import os
 
 
+def _normalize_prefix(prefix: str) -> str:
+    prefix = (prefix or "").strip()
+    if not prefix:
+        return ""
+    if not prefix.startswith("/"):
+        prefix = f"/{prefix}"
+    return prefix.rstrip("/")
+
+
+def _build_service_url(base_url: str, api_prefix: str, path: str) -> str:
+    base = (base_url or "").rstrip("/")
+    prefix = _normalize_prefix(api_prefix)
+    suffix = path if path.startswith("/") else f"/{path}"
+    return f"{base}{prefix}{suffix}"
+
+
 class Settings(BaseSettings):
     """Application settings"""
 
@@ -21,6 +37,8 @@ class Settings(BaseSettings):
     # Backend Services URLs (configure for your environment)
     auth_service_url: str = os.getenv("AUTH_SERVICE_URL", "http://localhost:5001")
     app_service_url: str = os.getenv("APP_SERVICE_URL", "http://localhost:5000")
+    auth_api_prefix: str = os.getenv("AUTH_API_PREFIX", "/api")
+    app_api_prefix: str = os.getenv("APP_API_PREFIX", "/api")
 
     # Kubernetes service URLs (example - update with your service names)
     # auth_service_url: str = "http://auth-service.namespace.svc.cluster.local:5001"
@@ -56,6 +74,7 @@ class Settings(BaseSettings):
     # Timeout
     request_timeout: float = 30.0
     connect_timeout: float = 10.0
+    http_verify_tls: bool = os.getenv("HTTP_VERIFY_TLS", "1") == "1"
 
     # Logging
     log_level: str = "INFO"
@@ -78,57 +97,89 @@ class ServiceURLs:
     """Backend service URLs"""
 
     # Auth Service
-    AUTH_LOGIN = f"{settings.auth_service_url}/auth/login"
-    AUTH_REGISTER = f"{settings.auth_service_url}/auth/register"
-    AUTH_LOGOUT = f"{settings.auth_service_url}/auth/logout"
-    AUTH_REFRESH = f"{settings.auth_service_url}/auth/refresh"
-    AUTH_ME = f"{settings.auth_service_url}/auth/me"
-    AUTH_FORGOT = f"{settings.auth_service_url}/auth/forgot"
-    AUTH_PASSWORD_RESET_REQUEST = f"{settings.auth_service_url}/auth/password-reset/request"
-    AUTH_PASSWORD_RESET_CONFIRM = f"{settings.auth_service_url}/auth/password-reset/confirm"
-    AUTH_GOOGLE = f"{settings.auth_service_url}/auth/google"
+    AUTH_LOGIN = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/login")
+    AUTH_REGISTER = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/register")
+    AUTH_LOGOUT = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/logout")
+    AUTH_REFRESH = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/refresh")
+    AUTH_ME = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/me")
+    AUTH_FORGOT = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/forgot")
+    AUTH_PASSWORD_RESET_REQUEST = _build_service_url(
+        settings.auth_service_url,
+        settings.auth_api_prefix,
+        "/password-reset/request",
+    )
+    AUTH_PASSWORD_RESET_CONFIRM = _build_service_url(
+        settings.auth_service_url,
+        settings.auth_api_prefix,
+        "/password-reset/confirm",
+    )
+    AUTH_GOOGLE = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/google")
 
     # App Service - Tasks
-    APP_TASKS = f"{settings.app_service_url}/app/tasks"
-    APP_TASK_START = f"{settings.app_service_url}/app/tasks"
-    APP_TASK_STOP = f"{settings.app_service_url}/app/tasks"
-    APP_TASK_COMPLETE = f"{settings.app_service_url}/app/tasks"
-    APP_TASK_DELETE = f"{settings.app_service_url}/app/tasks"
+    APP_TASKS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
+    APP_TASK_START = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
+    APP_TASK_STOP = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
+    APP_TASK_COMPLETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
+    APP_TASK_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
 
     # App Service - Projects
-    APP_PROJECTS = f"{settings.app_service_url}/app/projects"
-    APP_PROJECT_DELETE = f"{settings.app_service_url}/app/projects"
+    APP_PROJECTS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
+    APP_PROJECT_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
 
     # App Service - Goals
-    APP_GOALS = f"{settings.app_service_url}/app/goals"
-    APP_GOAL_DETAIL = f"{settings.app_service_url}/app/goals"
-    APP_GOAL_EDIT = f"{settings.app_service_url}/app/goals"
-    APP_GOAL_DELETE = f"{settings.app_service_url}/app/goals"
-    APP_GOAL_SUBGOALS = f"{settings.app_service_url}/app/goals/subgoals"
+    APP_GOALS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
+    APP_GOAL_DETAIL = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
+    APP_GOAL_EDIT = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
+    APP_GOAL_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
+    APP_GOAL_SUBGOALS = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/goals/subgoals",
+    )
 
     # App Service - Habits
-    APP_HABITS = f"{settings.app_service_url}/app/habits"
-    APP_HABIT_TRACK = f"{settings.app_service_url}/app/habits"
+    APP_HABITS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/habits")
+    APP_HABIT_TRACK = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/habits")
 
     # App Service - Todos
-    APP_TODOS = f"{settings.app_service_url}/app/todos"
+    APP_TODOS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/todos")
 
     # App Service - Reminders
-    APP_REMINDERS = f"{settings.app_service_url}/app/reminders"
+    APP_REMINDERS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
 
     # App Service - Labels
-    APP_LABELS = f"{settings.app_service_url}/app/labels"
+    APP_LABELS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/labels")
 
     # App Service - Reports
-    APP_REPORTS_SUMMARY = f"{settings.app_service_url}/app/reports/summary"
+    APP_REPORTS_SUMMARY = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/reports/summary",
+    )
 
     # App Service - Timer
-    APP_TIMER_ENTRIES = f"{settings.app_service_url}/app/timer/entries"
+    APP_TIMER_ENTRIES = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/timer/entries",
+    )
 
     # App Service - Settings
-    APP_SETTINGS_PROFILE = f"{settings.app_service_url}/app/settings/profile"
-    APP_SETTINGS_TIMEZONE = f"{settings.app_service_url}/app/settings/timezone"
-    APP_SETTINGS_NOTIFICATIONS = f"{settings.app_service_url}/app/settings/notifications"
+    APP_SETTINGS_PROFILE = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/settings/profile",
+    )
+    APP_SETTINGS_TIMEZONE = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/settings/timezone",
+    )
+    APP_SETTINGS_NOTIFICATIONS = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/settings/notifications",
+    )
 
 
 service_urls = ServiceURLs()

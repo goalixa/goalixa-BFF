@@ -2,14 +2,11 @@
 Authentication Middleware
 Validates JWT tokens and attaches user info to request state
 """
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 import logging
-import httpx
 from typing import Callable
-
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +22,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self.http_client = http_client
 
         # Public endpoints that don't require authentication
-        self.public_paths = [
+        self.public_paths = {
             "/",
             "/health",
+            "/readiness",
+            "/liveness",
             "/metrics",
             "/docs",
             "/redoc",
@@ -35,9 +34,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/bff/auth/login",
             "/bff/auth/register",
             "/bff/auth/forgot",
-            "/bff/auth/password-reset",
+            "/bff/auth/password-reset/request",
+            "/bff/auth/password-reset/confirm",
             "/bff/auth/google",
-        ]
+            "/bff/auth/refresh",
+        }
 
     async def dispatch(self, request: Request, call_next: Callable):
         """Process request and validate auth if needed"""
@@ -45,7 +46,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         path = request.url.path
 
         # Skip auth for public endpoints
-        if any(path.startswith(public_path) for public_path in self.public_paths):
+        if path in self.public_paths:
             return await call_next(request)
 
         # Skip auth for OPTIONS requests (CORS preflight)
