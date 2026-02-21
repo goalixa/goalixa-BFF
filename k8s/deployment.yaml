@@ -38,22 +38,39 @@ spec:
           value: "production"
         - name: DEBUG
           value: "false"
+        # Auth Service - Update with your actual auth service namespace and port
         - name: AUTH_SERVICE_URL
-          value: "http://auth.goalixa-auth.svc.cluster.local:80"
-        - name: APP_SERVICE_URL
-          value: "http://goalixa.goalixa-app.svc.cluster.local:80"
+          value: "http://goalixa-auth.goalixa-auth.svc.cluster.local:80"
         - name: AUTH_API_PREFIX
           value: "/api"
+        # App Service - Update with your actual app service namespace and port
+        - name: APP_SERVICE_URL
+          value: "http://goalixa-app.goalixa-app.svc.cluster.local:80"
         - name: APP_API_PREFIX
           value: "/api"
+        # Redis - Update with your actual Redis service
         - name: REDIS_URL
-          value: "redis://redis-cluster.redis-cluster.svc.cluster.local:6379/0"
+          value: "redis://redis.redis.svc.cluster.local:6379/0"
+        - name: REDIS_ENABLED
+          value: "true"
         - name: SECURE_COOKIES
           value: "true"
         - name: COOKIE_DOMAIN
           value: ".goalixa.com"
         - name: LOG_LEVEL
           value: "INFO"
+        - name: RATE_LIMIT_ENABLED
+          value: "true"
+        - name: RATE_LIMIT_REQUESTS
+          value: "100"
+        - name: RATE_LIMIT_PERIOD
+          value: "60"
+        # JWT - Use proper secret in production (via Kubernetes Secret)
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: bff-secrets
+              key: jwt-secret
         resources:
           requests:
             memory: "128Mi"
@@ -102,3 +119,25 @@ metadata:
   name: goalixa-bff
   labels:
     name: goalixa-bff
+---
+# Secret for JWT (example - use proper secret management in production)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bff-secrets
+  namespace: goalixa-bff
+type: Opaque
+stringData:
+  jwt-secret: "your-production-jwt-secret-key-here"
+---
+# ConfigMap for additional configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bff-config
+  namespace: goalixa-bff
+data:
+  # CORS origins for frontend
+  cors-origins: '["https://app.goalixa.com","https://www.goalixa.com"]'
+  # Cache TTL in seconds
+  cache-ttl: "300"

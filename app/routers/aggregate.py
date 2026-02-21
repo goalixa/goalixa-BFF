@@ -6,9 +6,11 @@ from fastapi.responses import JSONResponse
 import httpx
 import logging
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from app.config import settings, service_urls
+from app.main import http_client as shared_http_client
+from app.utils.cache import cached, get, set
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -18,9 +20,9 @@ async def fetch_from_service(
     service_url: str,
     request: Request,
     service_name: str
-) -> Dict[str, Any]:
+) -> Optional[Dict[str, Any]]:
     """
-    Fetch data from a backend service
+    Fetch data from a backend service using shared HTTP client
 
     Args:
         service_url: The service endpoint URL
@@ -31,26 +33,32 @@ async def fetch_from_service(
         JSON response or None if error
     """
     try:
+        if shared_http_client is None:
+            logger.error(f"Shared HTTP client not initialized for {service_name}")
+            return None
+
         headers = {
             k: v for k, v in request.headers.items()
             if k.lower() not in ['host', 'content-length']
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                service_url,
-                headers=headers,
-                cookies=request.cookies
-            )
+        response = await shared_http_client.get(
+            service_url,
+            headers=headers,
+            cookies=request.cookies
+        )
 
-            if response.status_code == 200:
-                return response.json()
-            else:
-                logger.warning(f"{service_name} returned {response.status_code}")
-                return None
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.warning(f"{service_name} returned {response.status_code}")
+            return None
 
-    except Exception as e:
+    except httpx.RequestError as e:
         logger.error(f"Error fetching from {service_name}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error fetching from {service_name}: {e}")
         return None
 
 
@@ -59,8 +67,19 @@ async def get_dashboard_data(request: Request):
     """
     Aggregate dashboard data from multiple services
     This reduces multiple frontend requests into a single BFF call
+    Results are cached for 60 seconds
     """
     try:
+        # Try to get from cache first
+        user_id = getattr(request.state, 'user', {}).get('user_id') if hasattr(request.state, 'user') else None
+        cache_key = f"dashboard:{user_id or 'anonymous'}"
+
+        if settings.redis_enabled:
+            cached_data = await get(cache_key)
+            if cached_data:
+                logger.debug("Returning cached dashboard data")
+                return JSONResponse(cached_data)
+
         # Fetch data from multiple endpoints in parallel
         tasks = [
             fetch_from_service(f"{service_urls.APP_TASKS}", request, "tasks"),
@@ -73,7 +92,7 @@ async def get_dashboard_data(request: Request):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        return JSONResponse({
+        response_data = {
             "status": "success",
             "data": {
                 "tasks": results[0] if results[0] else [],
@@ -84,7 +103,13 @@ async def get_dashboard_data(request: Request):
                 "user": results[5] if results[5] else None,
                 "timestamp": asyncio.get_event_loop().time()
             }
-        })
+        }
+
+        # Cache the result
+        if settings.redis_enabled:
+            await set(cache_key, response_data, ttl=60)
+
+        return JSONResponse(response_data)
 
     except Exception as e:
         logger.error(f"Error aggregating dashboard data: {e}")

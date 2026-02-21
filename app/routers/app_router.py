@@ -9,9 +9,17 @@ from typing import Optional
 
 from app.config import settings, service_urls
 from app.main import http_client as shared_http_client
+from app.utils.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Initialize circuit breaker for app service
+app_service_breaker = get_circuit_breaker(
+    "app-service",
+    failure_threshold=5,
+    recovery_timeout=30.0
+)
 
 
 async def forward_request(
@@ -30,7 +38,7 @@ async def forward_request(
     Returns:
         JSONResponse from backend service
     """
-    try:
+    async def _do_request():
         method = method or request.method
         body = await request.body() if method in ["POST", "PUT", "PATCH"] else None
 
@@ -70,6 +78,16 @@ async def forward_request(
             content=response.json()
         )
 
+    try:
+        # Use circuit breaker for the request
+        return await app_service_breaker.call(_do_request)
+
+    except CircuitBreakerOpenError:
+        logger.warning("Circuit breaker is open - app service unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="App service temporarily unavailable. Please try again later."
+        )
     except httpx.RequestError as e:
         logger.error(f"App service connection error: {e}")
         raise HTTPException(

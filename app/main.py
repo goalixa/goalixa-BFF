@@ -17,6 +17,8 @@ from app.config import settings
 from app.routers import auth, app_router, health, aggregate
 from app.middleware.auth_middleware import AuthMiddleware
 from app.middleware.logging_middleware import LoggingMiddleware
+from app.middleware.rate_limit_middleware import RateLimitMiddleware
+from app.utils.cache import get_redis_client, close_redis_client
 
 # Configure logging
 logging.basicConfig(
@@ -49,6 +51,11 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Goalixa BFF...")
 
+    # Initialize Redis if enabled
+    if settings.redis_enabled:
+        await get_redis_client()
+        logger.info("Redis caching enabled")
+
     # Initialize HTTP client with connection pooling
     limits = httpx.Limits(
         max_keepalive_connections=50,
@@ -71,6 +78,11 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down Goalixa BFF...")
     await http_client.aclose()
+
+    # Close Redis connection
+    if settings.redis_enabled:
+        await close_redis_client()
+
     logger.info("BFF shutdown complete")
 
 
@@ -99,6 +111,8 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Custom Middlewares
+# Note: Middlewares are processed in reverse order of registration
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(AuthMiddleware, http_client=http_client)
 app.add_middleware(LoggingMiddleware)
 
