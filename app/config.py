@@ -56,9 +56,9 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
 
-    # Redis (for caching)
+    # Redis (for caching) - disabled by default, enable when ready
     redis_url: str = "redis://redis.harbor.svc.cluster.local:6379/0"
-    redis_enabled: bool = True
+    redis_enabled: bool = False
     cache_ttl_seconds: int = 300  # 5 minutes default
 
     # Security
