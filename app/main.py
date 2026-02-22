@@ -19,6 +19,7 @@ from app.middleware.auth_middleware import AuthMiddleware
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.middleware.rate_limit_middleware import RateLimitMiddleware
 from app.utils.cache import get_redis_client, close_redis_client
+from app import http_client as http_client_module
 
 # Configure logging
 logging.basicConfig(
@@ -69,6 +70,9 @@ async def lifespan(app: FastAPI):
         timeout=timeout,
         verify=settings.http_verify_tls
     )
+
+    # Set the shared HTTP client in the http_client module
+    http_client_module.set_http_client(http_client)
 
     logger.info(f"BFF connected to auth service at {settings.auth_service_url}")
     logger.info(f"BFF connected to app service at {settings.app_service_url}")

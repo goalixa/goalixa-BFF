@@ -11,7 +11,7 @@ import jwt
 import httpx
 
 from app.config import settings
-from app.main import http_client as shared_http_client
+from app.http_client import get_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             User data if valid, None otherwise
         """
         try:
-            if shared_http_client is None:
+            if get_http_client() is None:
                 logger.error("Shared HTTP client not initialized")
                 return None
 
@@ -114,7 +114,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 if k.lower() not in ['host']
             }
 
-            response = await shared_http_client.get(
+            response = await get_http_client().get(
                 f"{settings.auth_service_url}{settings.auth_api_prefix}/me",
                 headers=headers,
                 cookies=request.cookies

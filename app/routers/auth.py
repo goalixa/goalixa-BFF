@@ -7,7 +7,7 @@ import httpx
 import logging
 
 from app.config import service_urls
-from app.main import http_client as shared_http_client
+from app.http_client import get_http_client
 from app.utils.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 
 router = APIRouter()
@@ -49,7 +49,7 @@ async def _forward_auth_request(
         Response from auth service
     """
     async def _do_request():
-        if shared_http_client is None:
+        if get_http_client() is None:
             logger.error("Shared HTTP client not initialized")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -63,7 +63,7 @@ async def _forward_auth_request(
             if k.lower() not in ['host', 'content-length'] if not include_body or k.lower() != 'content-length'
         }
 
-        response = await shared_http_client.request(
+        response = await get_http_client().request(
             method=method,
             url=url,
             content=body,
@@ -166,7 +166,7 @@ async def refresh(request: Request):
 async def get_current_user(request: Request):
     """Get current authenticated user"""
     try:
-        if shared_http_client is None:
+        if get_http_client() is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Service not properly initialized"
@@ -177,7 +177,7 @@ async def get_current_user(request: Request):
             if k.lower() not in ['host']
         }
 
-        auth_response = await shared_http_client.get(
+        auth_response = await get_http_client().get(
             service_urls.AUTH_ME,
             headers=headers,
             cookies=request.cookies
@@ -245,13 +245,13 @@ async def password_reset_confirm(request: Request):
 async def google_login():
     """Get Google OAuth URL"""
     try:
-        if shared_http_client is None:
+        if get_http_client() is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Service not properly initialized"
             )
 
-        auth_response = await shared_http_client.get(
+        auth_response = await get_http_client().get(
             service_urls.AUTH_GOOGLE
         )
 

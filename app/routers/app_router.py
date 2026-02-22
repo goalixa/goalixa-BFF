@@ -8,7 +8,7 @@ import logging
 from typing import Optional
 
 from app.config import settings, service_urls
-from app.main import http_client as shared_http_client
+from app.http_client import get_http_client
 from app.utils.circuit_breaker import get_circuit_breaker, CircuitBreakerOpenError
 
 router = APIRouter()
@@ -54,14 +54,14 @@ async def forward_request(
         }
 
         # Use shared HTTP client from main app
-        if shared_http_client is None:
+        if get_http_client() is None:
             logger.error("Shared HTTP client not initialized")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Service not properly initialized"
             )
 
-        response = await shared_http_client.request(
+        response = await get_http_client().request(
             method=method,
             url=url,
             content=body,

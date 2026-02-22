@@ -9,7 +9,7 @@ import asyncio
 from typing import Dict, Any, Optional
 
 from app.config import settings, service_urls
-from app.main import http_client as shared_http_client
+from app.http_client import get_http_client
 from app.utils.cache import cached, get, set
 
 router = APIRouter()
@@ -33,7 +33,7 @@ async def fetch_from_service(
         JSON response or None if error
     """
     try:
-        if shared_http_client is None:
+        if get_http_client() is None:
             logger.error(f"Shared HTTP client not initialized for {service_name}")
             return None
 
@@ -42,7 +42,7 @@ async def fetch_from_service(
             if k.lower() not in ['host', 'content-length']
         }
 
-        response = await shared_http_client.get(
+        response = await get_http_client().get(
             service_url,
             headers=headers,
             cookies=request.cookies
