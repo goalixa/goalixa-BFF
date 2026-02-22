@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: bff
-        image: YOUR_REGISTRY/bff-service:latest
+        image: harbor.goalixa.com/goalixa-bff/bff:latest
         imagePullPolicy: Always
         ports:
         - name: http
