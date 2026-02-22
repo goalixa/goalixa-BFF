@@ -38,21 +38,21 @@ spec:
           value: "production"
         - name: DEBUG
           value: "false"
-        # Auth Service - Update with your actual auth service namespace and port
+        # Auth Service - service: auth in namespace: goalixa-auth
         - name: AUTH_SERVICE_URL
-          value: "http://goalixa-auth.goalixa-auth.svc.cluster.local:80"
+          value: "http://auth.goalixa-auth.svc.cluster.local:80"
         - name: AUTH_API_PREFIX
           value: "/api"
-        # App Service - Update with your actual app service namespace and port
+        # App Service - service: goalixa in namespace: goalixa-app
         - name: APP_SERVICE_URL
-          value: "http://goalixa-app.goalixa-app.svc.cluster.local:80"
+          value: "http://goalixa.goalixa-app.svc.cluster.local:80"
         - name: APP_API_PREFIX
           value: "/api"
-        # Redis - Update with your actual Redis service
+        # Redis - disabled for now, enable when ready
         - name: REDIS_URL
           value: "redis://redis.redis.svc.cluster.local:6379/0"
         - name: REDIS_ENABLED
-          value: "true"
+          value: "false"
         - name: SECURE_COOKIES
           value: "true"
         - name: COOKIE_DOMAIN
