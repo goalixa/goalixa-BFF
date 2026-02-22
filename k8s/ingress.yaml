@@ -1,45 +1,45 @@
 ---
-# BFF Ingress Configuration
-# This configuration routes traffic from the PWA to the BFF
-# Update with your domain and ingress controller settings
+# BFF Ingress Configuration - STAGING/TESTING
+# Using pwa.goalixa.com for testing
+# TODO: After testing, replace pwa.goalixa.com with app.goalixa.com
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: bff-ingress
   namespace: goalixa-bff
   annotations:
-    # Traefik annotations (uncomment if using Traefik)
-    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    # traefik.ingress.kubernetes.io/router.tls: "true"
-    # traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    # NGINX ingress annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 
-    # NGINX annotations (uncomment if using NGINX)
-    # kubernetes.io/ingress.class: nginx
-    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
-
-    # CORS headers
+    # CORS headers - allow PWA domain
     nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://app.goalixa.com,https://www.goalixa.com"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Requested-With"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://pwa.goalixa.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Requested-With, Accept, Origin"
+    nginx.ingress.kubernetes.io/cors-expose-headers: "Content-Length, Content-Type"
+    nginx.ingress.kubernetes.io/cors-max-age: "3600"
 
-    # Rate limiting at ingress level (optional, in addition to middleware)
-    # nginx.ingress.kubernetes.io/limit-rps: "100"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
 
-    # Buffer sizes for large requests/responses
+    # Proxy settings
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/referrer-policy: "strict-origin-when-cross-origin"
 
 spec:
-  # Update ingressClassName based on your setup (traefik, nginx, etc.)
   ingressClassName: nginx
   tls:
   - hosts:
-    - api.goalixa.com  # Update with your API domain
-    secretName: bff-tls  # TLS certificate secret (create with cert-manager or manually)
+    - pwa.goalixa.com
+    secretName: pwa-bff-tls  # TODO: Change to app-bff-tls for production
   rules:
-  - host: api.goalixa.com  # Update with your API domain
+  - host: pwa.goalixa.com  # TODO: Change to app.goalixa.com for production
     http:
       paths:
       # BFF API endpoints
@@ -50,7 +50,7 @@ spec:
             name: bff-service
             port:
               number: 8000
-      # Health checks
+      # Health checks (no auth required)
       - path: /health
         pathType: Exact
         backend:
@@ -58,34 +58,17 @@ spec:
             name: bff-service
             port:
               number: 8000
-      - path: /metrics
+      - path: /liveness
         pathType: Exact
         backend:
           service:
             name: bff-service
             port:
               number: 8000
-
----
-# Alternative: Gateway API (if using Gateway instead of Ingress)
-# Uncomment if you're using Gateway API instead of traditional Ingress
-#
-# apiVersion: gateway.networking.k8s.io/v1beta1
-# kind: HTTPRoute
-# metadata:
-#   name: bff-route
-#   namespace: goalixa-bff
-# spec:
-#   parentRefs:
-#   - name: goalixa-gateway
-#     namespace: gateway-namespace
-#   hostnames:
-#   - "api.goalixa.com"
-#   rules:
-#   - matches:
-#     - path:
-#         type: PathPrefix
-#         value: /bff
-#     backendRefs:
-#     - name: bff-service
-#       port: 8000
+      - path: /readiness
+        pathType: Exact
+        backend:
+          service:
+            name: bff-service
+            port:
+              number: 8000
