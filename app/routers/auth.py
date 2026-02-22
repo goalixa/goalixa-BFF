@@ -71,9 +71,18 @@ async def _forward_auth_request(
             cookies=request.cookies
         )
 
+        # Parse JSON only if there's content
+        response_content = None
+        if response.status_code != 204 and response.content:
+            try:
+                response_content = response.json()
+            except Exception as e:
+                logger.warning(f"Failed to parse response JSON: {e}")
+                response_content = {"raw_content": response.text}
+
         json_response = JSONResponse(
             status_code=response.status_code,
-            content=response.json() if response.status_code != 204 else None
+            content=response_content
         )
 
         _forward_set_cookie_headers(response, json_response)

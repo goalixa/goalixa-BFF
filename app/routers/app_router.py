@@ -73,9 +73,15 @@ async def forward_request(
         if response.status_code == 204:
             return Response(status_code=204)
 
+        # Parse JSON only if there's content
+        try:
+            content = response.json() if response.content else None
+        except Exception:
+            content = {"raw_content": response.text} if response.text else None
+
         return JSONResponse(
             status_code=response.status_code,
-            content=response.json()
+            content=content
         )
 
     try:

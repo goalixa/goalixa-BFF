@@ -1,5 +1,5 @@
 ---
-# BFF Ingress Configuration - STAGING/TESTING
+# BFF Ingress Configuration - STAGING/TESTING with Traefik
 # Using pwa.goalixa.com for testing
 # TODO: After testing, replace pwa.goalixa.com with app.goalixa.com
 apiVersion: networking.k8s.io/v1
@@ -8,36 +8,16 @@ metadata:
   name: bff-ingress
   namespace: goalixa-bff
   annotations:
-    # NGINX ingress annotations
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-
-    # CORS headers - allow PWA domain
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "https://pwa.goalixa.com"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Requested-With, Accept, Origin"
-    nginx.ingress.kubernetes.io/cors-expose-headers: "Content-Length, Content-Type"
-    nginx.ingress.kubernetes.io/cors-max-age: "3600"
-
-    # Rate limiting
-    nginx.ingress.kubernetes.io/limit-rps: "100"
-
-    # Proxy settings
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
-
-    # Security headers
-    nginx.ingress.kubernetes.io/referrer-policy: "strict-origin-when-cross-origin"
+    # Traefik specific annotations
+    traefik.ingress.kubernetes.io/router.entrypoints: web
 
 spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-    - pwa.goalixa.com
-    secretName: pwa-bff-tls  # TODO: Change to app-bff-tls for production
+  ingressClassName: traefik
+  # TLS disabled for testing - enable after setup
+  # tls:
+  # - hosts:
+  #   - pwa.goalixa.com
+  #   secretName: pwa-bff-tls
   rules:
   - host: pwa.goalixa.com  # TODO: Change to app.goalixa.com for production
     http:
@@ -72,3 +52,33 @@ spec:
             name: bff-service
             port:
               number: 8000
+
+---
+# Traefik Middleware for CORS (can be applied later if needed)
+# Note: BFF FastAPI already handles CORS via app/config.py
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: bff-cors
+  namespace: goalixa-bff
+spec:
+  headers:
+    accessControlAllowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+      - OPTIONS
+    accessControlAllowHeaders:
+      - Authorization
+      - Content-Type
+      - X-Requested-With
+      - Accept
+      - Origin
+    accessControlAllowOriginList:
+      - https://pwa.goalixa.com
+      - http://pwa.goalixa.com
+      # TODO: For production: Add https://app.goalixa.com
+    accessControlMaxAge: 100
+    addVaryHeader: true
