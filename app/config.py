@@ -45,12 +45,11 @@ class Settings(BaseSettings):
     # app_service_url: str = "http://app-service.namespace.svc.cluster.local:80"
 
     # CORS origins
-    # TODO: For production (after testing): Move app.goalixa.com to top, remove pwa.goalixa.com
     cors_origins: List[str] = [
         "http://localhost:8080",   # Local development
         "http://localhost:3000",   # Local development
-        "https://pwa.goalixa.com",  # STAGING/TESTING - remove after testing
-        "https://app.goalixa.com",  # PRODUCTION - will be primary after testing
+        "https://pwa.goalixa.com",  # STAGING - can be removed later
+        "https://app.goalixa.com",   # PRODUCTION
         "https://www.goalixa.com",
         "https://goalixa.com",
     ]

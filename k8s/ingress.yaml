@@ -1,7 +1,6 @@
 ---
-# BFF Ingress Configuration - STAGING/TESTING with Traefik
-# Using pwa.goalixa.com for testing
-# TODO: After testing, replace pwa.goalixa.com with app.goalixa.com
+# BFF Ingress Configuration - PRODUCTION
+# Using app.goalixa.com for production
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -13,13 +12,13 @@ metadata:
 
 spec:
   ingressClassName: traefik
-  # TLS disabled for testing - enable after setup
+  # TLS - enable when certificate is ready
   # tls:
   # - hosts:
-  #   - pwa.goalixa.com
-  #   secretName: pwa-bff-tls
+  #   - app.goalixa.com
+  #   secretName: app-bff-tls
   rules:
-  - host: pwa.goalixa.com  # TODO: Change to app.goalixa.com for production
+  - host: app.goalixa.com  # Production domain
     http:
       paths:
       # BFF API endpoints
@@ -54,8 +53,7 @@ spec:
               number: 8000
 
 ---
-# Traefik Middleware for CORS (can be applied later if needed)
-# Note: BFF FastAPI already handles CORS via app/config.py
+# Traefik Middleware for CORS
 apiVersion: traefik.containo.us/v1alpha1
 kind: Middleware
 metadata:
@@ -77,8 +75,9 @@ spec:
       - Accept
       - Origin
     accessControlAllowOriginList:
+      - https://app.goalixa.com
       - https://pwa.goalixa.com
-      - http://pwa.goalixa.com
-      # TODO: For production: Add https://app.goalixa.com
+      - https://www.goalixa.com
     accessControlMaxAge: 100
     addVaryHeader: true
+
