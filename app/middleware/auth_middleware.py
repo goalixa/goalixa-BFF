@@ -9,6 +9,7 @@ import logging
 from typing import Callable, Optional
 import jwt
 import httpx
+import time
 
 from app.config import settings
 from app.http_client import get_http_client
@@ -72,6 +73,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             Decoded payload if valid, None otherwise
         """
+        start_time = time.time()
         try:
             # Remove 'Bearer ' prefix if present
             if token.startswith("Bearer "):
@@ -87,16 +89,43 @@ class AuthMiddleware(BaseHTTPMiddleware):
             token_type = payload.get("type")
             if token_type and token_type != "access":
                 return None
+
+            # Record successful validation
+            try:
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_auth_validation('local_jwt', duration, True)
+            except ImportError:
+                pass
+
             return payload
 
         except jwt.ExpiredSignatureError:
             logger.warning("JWT token has expired")
+            try:
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_auth_validation('local_jwt', duration, False, 'expired_token')
+            except ImportError:
+                pass
             return None
         except jwt.InvalidTokenError as e:
             logger.warning(f"Invalid JWT token: {e}")
+            try:
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_auth_validation('local_jwt', duration, False, 'invalid_token')
+            except ImportError:
+                pass
             return None
         except Exception as e:
             logger.error(f"Error validating JWT token: {e}")
+            try:
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_auth_validation('local_jwt', duration, False, 'validation_error')
+            except ImportError:
+                pass
             return None
 
     async def _validate_with_auth_service(self, request: Request) -> Optional[dict]:
@@ -109,9 +138,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             User data if valid, None otherwise
         """
+        start_time = time.time()
         try:
             if get_http_client() is None:
                 logger.error("Shared HTTP client not initialized")
+                try:
+                    from app.utils.metrics import MetricsHelper
+                    duration = time.time() - start_time
+                    MetricsHelper.record_auth_validation('auth_service', duration, False, 'service_error')
+                except ImportError:
+                    pass
                 return None
 
             headers = {
@@ -126,15 +162,39 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
 
             if response.status_code == 200:
+                try:
+                    from app.utils.metrics import MetricsHelper
+                    duration = time.time() - start_time
+                    MetricsHelper.record_auth_validation('auth_service', duration, True)
+                except ImportError:
+                    pass
                 return response.json()
             else:
+                try:
+                    from app.utils.metrics import MetricsHelper
+                    duration = time.time() - start_time
+                    MetricsHelper.record_auth_validation('auth_service', duration, False, 'invalid_token')
+                except ImportError:
+                    pass
                 return None
 
         except httpx.RequestError as e:
             logger.error(f"Error calling auth service for validation: {e}")
+            try:
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_auth_validation('auth_service', duration, False, 'service_error')
+            except ImportError:
+                pass
             return None
         except Exception as e:
             logger.error(f"Unexpected error during auth validation: {e}")
+            try:
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_auth_validation('auth_service', duration, False, 'validation_error')
+            except ImportError:
+                pass
             return None
 
     async def _extract_token(self, request: Request) -> Optional[str]:

@@ -102,6 +102,13 @@ class CircuitBreaker:
         self._last_failure_time = time.time()
         logger.warning(f"Circuit breaker '{self.name}' opened after {self._failure_count} failures")
 
+        # Record metrics
+        try:
+            from app.utils.metrics import MetricsHelper
+            MetricsHelper.record_circuit_breaker_state(self.name, 'open')
+        except ImportError:
+            pass  # Metrics not available in all contexts
+
     async def _close_circuit(self):
         """Close the circuit (recovery successful)"""
         self._state = CircuitState.CLOSED
@@ -110,11 +117,26 @@ class CircuitBreaker:
         self._last_success_time = time.time()
         logger.info(f"Circuit breaker '{self.name}' closed - service recovered")
 
+        # Record metrics
+        try:
+            from app.utils.metrics import MetricsHelper
+            MetricsHelper.record_circuit_breaker_state(self.name, 'closed')
+            MetricsHelper.record_circuit_breaker_success(self.name)
+        except ImportError:
+            pass
+
     async def _half_open_circuit(self):
         """Move to half-open state for testing"""
         self._state = CircuitState.HALF_OPEN
         self._half_open_calls = 0
         logger.info(f"Circuit breaker '{self.name}' moved to half-open state for testing")
+
+        # Record metrics
+        try:
+            from app.utils.metrics import MetricsHelper
+            MetricsHelper.record_circuit_breaker_state(self.name, 'half_open')
+        except ImportError:
+            pass
 
     async def call(self, func: Callable, *args, **kwargs) -> Any:
         """
@@ -138,6 +160,13 @@ class CircuitBreaker:
                 if self._should_attempt_reset():
                     await self._half_open_circuit()
                 else:
+                    # Record circuit breaker rejection
+                    try:
+                        from app.utils.metrics import MetricsHelper
+                        MetricsHelper.record_circuit_breaker_rejected(self.name)
+                    except ImportError:
+                        pass
+
                     raise CircuitBreakerOpenError(
                         f"Circuit breaker '{self.name}' is open. "
                         f"Service unavailable. Try again later."
@@ -166,6 +195,13 @@ class CircuitBreaker:
                 elif self._state == CircuitState.CLOSED:
                     self._failure_count = 0
 
+            # Record success
+            try:
+                from app.utils.metrics import MetricsHelper
+                MetricsHelper.record_circuit_breaker_success(self.name)
+            except ImportError:
+                pass
+
             return result
 
         except self.expected_exception as e:
@@ -184,6 +220,13 @@ class CircuitBreaker:
                 elif self._state == CircuitState.HALF_OPEN:
                     await self._open_circuit()
 
+            # Record failure
+            try:
+                from app.utils.metrics import MetricsHelper
+                MetricsHelper.record_circuit_breaker_failure(self.name)
+            except ImportError:
+                pass
+
             raise
 
         except Exception as e:
@@ -200,6 +243,13 @@ class CircuitBreaker:
                     await self._open_circuit()
                 elif self._state == CircuitState.HALF_OPEN:
                     await self._open_circuit()
+
+            # Record failure
+            try:
+                from app.utils.metrics import MetricsHelper
+                MetricsHelper.record_circuit_breaker_failure(self.name)
+            except ImportError:
+                pass
 
             raise
 

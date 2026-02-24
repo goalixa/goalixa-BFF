@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 import httpx
 import logging
 from typing import Optional
+import time
 
 from app.config import settings, service_urls
 from app.http_client import get_http_client
@@ -40,49 +41,81 @@ async def forward_request(
     """
     async def _do_request():
         http_method = method or request.method
-        body = await request.body() if http_method in ["POST", "PUT", "PATCH"] else None
+        start_time = time.time()
 
-        # Build URL with query parameters
-        url = service_url
-        if request.url.query:
-            url += f"?{request.url.query}"
+        # Track in-progress requests
+        try:
+            from app.main import BACKEND_REQUESTS_IN_PROGRESS
+            BACKEND_REQUESTS_IN_PROGRESS.labels(service='app-service').inc()
+        except ImportError:
+            pass
 
-        # Filter headers - remove host and content-length
-        headers = {
-            k: v for k, v in request.headers.items()
-            if k.lower() not in ['host', 'content-length']
-        }
+        try:
+            body = await request.body() if http_method in ["POST", "PUT", "PATCH"] else None
 
-        # Use shared HTTP client from main app
-        if get_http_client() is None:
-            logger.error("Shared HTTP client not initialized")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service not properly initialized"
+            # Build URL with query parameters
+            url = service_url
+            if request.url.query:
+                url += f"?{request.url.query}"
+
+            # Filter headers - remove host and content-length
+            headers = {
+                k: v for k, v in request.headers.items()
+                if k.lower() not in ['host', 'content-length']
+            }
+
+            # Use shared HTTP client from main app
+            if get_http_client() is None:
+                logger.error("Shared HTTP client not initialized")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Service not properly initialized"
+                )
+
+            response = await get_http_client().request(
+                method=http_method,
+                url=url,
+                content=body,
+                headers=headers,
+                cookies=request.cookies
             )
 
-        response = await get_http_client().request(
-            method=http_method,
-            url=url,
-            content=body,
-            headers=headers,
-            cookies=request.cookies
-        )
+            # Record metrics
+            try:
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_backend_request(
+                    service='app-service',
+                    method=http_method,
+                    endpoint=request.url.path,
+                    status_code=response.status_code,
+                    duration=duration
+                )
+            except ImportError:
+                pass
 
-        # Handle empty responses
-        if response.status_code == 204:
-            return Response(status_code=204)
+            # Handle empty responses
+            if response.status_code == 204:
+                return Response(status_code=204)
 
-        # Parse JSON only if there's content
-        try:
-            content = response.json() if response.content else None
-        except Exception:
-            content = {"raw_content": response.text} if response.text else None
+            # Parse JSON only if there's content
+            try:
+                content = response.json() if response.content else None
+            except Exception:
+                content = {"raw_content": response.text} if response.text else None
 
-        return JSONResponse(
-            status_code=response.status_code,
-            content=content
-        )
+            return JSONResponse(
+                status_code=response.status_code,
+                content=content
+            )
+
+        finally:
+            # Decrement in-progress requests
+            try:
+                from app.main import BACKEND_REQUESTS_IN_PROGRESS
+                BACKEND_REQUESTS_IN_PROGRESS.labels(service='app-service').dec()
+            except ImportError:
+                pass
 
     try:
         # Use circuit breaker for the request

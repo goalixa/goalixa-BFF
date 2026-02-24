@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
 import httpx
 import logging
+import time
 
 from app.config import service_urls
 from app.http_client import get_http_client
@@ -48,46 +49,78 @@ async def _forward_auth_request(
     Returns:
         Response from auth service
     """
+    start_time = time.time()
+
     async def _do_request():
-        if get_http_client() is None:
-            logger.error("Shared HTTP client not initialized")
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service not properly initialized"
+        # Track in-progress requests
+        try:
+            from app.main import BACKEND_REQUESTS_IN_PROGRESS
+            BACKEND_REQUESTS_IN_PROGRESS.labels(service='auth-service').inc()
+        except ImportError:
+            pass
+
+        try:
+            if get_http_client() is None:
+                logger.error("Shared HTTP client not initialized")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Service not properly initialized"
+                )
+
+            body = await request.body() if include_body else None
+
+            headers = {
+                k: v for k, v in request.headers.items()
+                if k.lower() not in ['host', 'content-length'] if not include_body or k.lower() != 'content-length'
+            }
+
+            response = await get_http_client().request(
+                method=method,
+                url=url,
+                content=body,
+                headers=headers,
+                cookies=request.cookies
             )
 
-        body = await request.body() if include_body else None
-
-        headers = {
-            k: v for k, v in request.headers.items()
-            if k.lower() not in ['host', 'content-length'] if not include_body or k.lower() != 'content-length'
-        }
-
-        response = await get_http_client().request(
-            method=method,
-            url=url,
-            content=body,
-            headers=headers,
-            cookies=request.cookies
-        )
-
-        # Parse JSON only if there's content
-        response_content = None
-        if response.status_code != 204 and response.content:
+            # Record metrics
             try:
-                response_content = response.json()
-            except Exception as e:
-                logger.warning(f"Failed to parse response JSON: {e}")
-                response_content = {"raw_content": response.text}
+                from app.utils.metrics import MetricsHelper
+                duration = time.time() - start_time
+                MetricsHelper.record_backend_request(
+                    service='auth-service',
+                    method=method,
+                    endpoint=url,
+                    status_code=response.status_code,
+                    duration=duration
+                )
+            except ImportError:
+                pass
 
-        json_response = JSONResponse(
-            status_code=response.status_code,
-            content=response_content
-        )
+            # Parse JSON only if there's content
+            response_content = None
+            if response.status_code != 204 and response.content:
+                try:
+                    response_content = response.json()
+                except Exception as e:
+                    logger.warning(f"Failed to parse response JSON: {e}")
+                    response_content = {"raw_content": response.text}
 
-        _forward_set_cookie_headers(response, json_response)
+            json_response = JSONResponse(
+                status_code=response.status_code,
+                content=response_content
+            )
 
-        return json_response
+            _forward_set_cookie_headers(response, json_response)
+
+            return json_response
+
+        finally:
+            # Decrement in-progress requests
+            try:
+                from app.main import BACKEND_REQUESTS_IN_PROGRESS
+                BACKEND_REQUESTS_IN_PROGRESS.labels(service='auth-service').dec()
+            except ImportError:
+                pass
 
     try:
         return await auth_service_breaker.call(_do_request)
