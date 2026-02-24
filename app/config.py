@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
+    auth_access_cookie_name: str = os.getenv("AUTH_ACCESS_COOKIE_NAME", "goalixa_access")
+    auth_refresh_cookie_name: str = os.getenv("AUTH_REFRESH_COOKIE_NAME", "goalixa_refresh")
 
     # Redis (for caching) - disabled by default, enable when ready
     redis_url: str = "redis://redis.harbor.svc.cluster.local:6379/0"

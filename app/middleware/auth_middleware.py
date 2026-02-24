@@ -82,6 +82,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 settings.jwt_secret,
                 algorithms=[settings.jwt_algorithm]
             )
+
+            # Only treat access tokens as authenticated user context.
+            token_type = payload.get("type")
+            if token_type and token_type != "access":
+                return None
             return payload
 
         except jwt.ExpiredSignatureError:
@@ -147,10 +152,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if auth_header:
             return auth_header
 
-        # Try cookies
-        access_token = request.cookies.get("access_token")
-        if access_token:
-            return f"Bearer {access_token}"
+        # Try known access-token cookie names
+        cookie_candidates = (
+            settings.auth_access_cookie_name,
+            "access_token",      # legacy fallback
+            "goalixa_access",    # explicit fallback for local envs
+        )
+        for cookie_name in cookie_candidates:
+            access_token = request.cookies.get(cookie_name)
+            if access_token:
+                return f"Bearer {access_token}"
 
         return None
 
