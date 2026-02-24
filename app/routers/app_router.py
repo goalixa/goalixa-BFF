@@ -333,6 +333,24 @@ async def get_weekly_goals(request: Request):
     return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals")
 
 
+@router.post("/weekly-goals")
+async def create_weekly_goal(request: Request):
+    """Create a new weekly goal"""
+    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals")
+
+
+@router.post("/weekly-goals/{goal_id}/toggle")
+async def toggle_weekly_goal(goal_id: str, request: Request):
+    """Toggle weekly goal completion"""
+    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals/{goal_id}/toggle")
+
+
+@router.post("/weekly-goals/{goal_id}/delete")
+async def delete_weekly_goal(goal_id: str, request: Request):
+    """Delete a weekly goal"""
+    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals/{goal_id}/delete")
+
+
 # ============= REPORTS =============
 
 @router.get("/reports/summary")

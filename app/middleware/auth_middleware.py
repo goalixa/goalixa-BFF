@@ -4,7 +4,7 @@ Validates JWT tokens and attaches user info to request state
 """
 from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, RedirectResponse
 import logging
 from typing import Callable, Optional
 import jwt
@@ -245,9 +245,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
             if not token:
                 logger.warning(f"No token found for {path}")
-                request.state.authenticated = False
-                request.state.user = None
-                return await call_next(request)
+                return self._handle_unauthorized(request, path, call_next)
 
             # Try to validate JWT locally first (faster)
             user_payload = await self._validate_jwt_locally(token)
@@ -263,15 +261,55 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 logger.debug(f"User authenticated: {user_payload.get('user_id', 'unknown')}")
             else:
                 # Authentication failed
-                request.state.authenticated = False
-                request.state.user = None
+                return self._handle_unauthorized(request, path, call_next, token_expired=True)
 
             response = await call_next(request)
             return response
 
         except Exception as e:
             logger.error(f"Auth middleware error: {e}")
-            # Continue with request but mark as unauthenticated
-            request.state.authenticated = False
-            request.state.user = None
-            return await call_next(request)
+            return self._handle_unauthorized(request, path, call_next, error=str(e))
+
+    def _handle_unauthorized(
+        self,
+        request: Request,
+        path: str,
+        call_next: Optional[Callable] = None,
+        token_expired: bool = False,
+        error: Optional[str] = None
+    ):
+        """
+        Handle unauthorized requests
+
+        For API requests (Accept: application/json): Return 401 JSON
+        For browser requests: Redirect to login page
+        """
+        _ = call_next  # Unused parameter (kept for interface consistency)
+        _ = error  # Unused parameter (logged elsewhere)
+
+        request.state.authenticated = False
+        request.state.user = None
+
+        # Check if this is an API request (expects JSON response)
+        accept_header = request.headers.get("Accept", "")
+        is_api_request = "application/json" in accept_header or path.startswith("/bff/")
+        is_browser_navigation = "text/html" in accept_header
+
+        # For API requests, return 401
+        if is_api_request or not is_browser_navigation:
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={
+                    "error": "unauthorized",
+                    "message": "Authentication required" if not token_expired else "Session expired. Please login again.",
+                    "redirect_url": "/auth/login"
+                }
+            )
+
+        # For browser navigation, redirect to login
+        login_url = "/auth/login"
+        logger.info(f"Redirecting unauthenticated browser request to {login_url}")
+        return RedirectResponse(
+            url=login_url,
+            status_code=status.HTTP_302_FOUND
+        )
