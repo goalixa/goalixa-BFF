@@ -288,6 +288,18 @@ async def create_label(request: Request):
     return await forward_request(request, service_urls.APP_LABELS)
 
 
+@router.get("/planner")
+async def get_planner(request: Request):
+    """Get planner data"""
+    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/planner")
+
+
+@router.get("/weekly-goals")
+async def get_weekly_goals(request: Request):
+    """Get weekly goals"""
+    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals")
+
+
 # ============= REPORTS =============
 
 @router.get("/reports/summary")
@@ -297,6 +309,12 @@ async def get_reports_summary(request: Request):
 
 
 # ============= TIMER =============
+
+@router.get("/timer")
+async def get_timer(request: Request):
+    """Get timer data (aliases to dashboard for frontend compatibility)"""
+    return await forward_request(request, service_urls.APP_TIMER_DASHBOARD)
+
 
 @router.get("/timer/entries")
 async def get_timer_entries(request: Request):
