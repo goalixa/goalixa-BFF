@@ -6,6 +6,7 @@ import httpx
 import logging
 
 from app.config import settings
+from app.utils.circuit_breaker import get_circuit_breaker, _circuit_breakers
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -95,3 +96,60 @@ async def deep_health_check():
     health_status["overall"] = "healthy" if all_healthy else "degraded"
 
     return health_status
+
+
+@router.post("/health/circuit-breaker/reset")
+async def reset_circuit_breakers():
+    """
+    Reset all circuit breakers (development only)
+    This endpoint allows manually resetting circuit breakers that have opened
+    """
+    reset_breakers = []
+
+    for name, breaker in _circuit_breakers.items():
+        # Store current state before reset
+        old_state = breaker.state.value
+        old_failures = breaker.failure_count
+
+        # Reset the circuit breaker
+        breaker._state = breaker.CircuitState.CLOSED
+        breaker._failure_count = 0
+        breaker._half_open_calls = 0
+        breaker._last_failure_time = None
+
+        reset_breakers.append({
+            "name": name,
+            "previous_state": old_state,
+            "previous_failures": old_failures,
+            "new_state": "closed"
+        })
+
+        logger.info(f"Circuit breaker '{name}' manually reset")
+
+    return {
+        "status": "success",
+        "message": "All circuit breakers have been reset",
+        "reset_breakers": reset_breakers
+    }
+
+
+@router.get("/health/circuit-breaker/status")
+async def get_circuit_breaker_status():
+    """
+    Get status of all circuit breakers
+    """
+    breakers_status = []
+
+    for name, breaker in _circuit_breakers.items():
+        breakers_status.append({
+            "name": name,
+            "state": breaker.state.value,
+            "failure_count": breaker.failure_count,
+            "failure_threshold": breaker.failure_threshold,
+            "recovery_timeout": breaker.recovery_timeout,
+            "last_failure_time": breaker.last_failure_time
+        })
+
+    return {
+        "circuit_breakers": breakers_status
+    }

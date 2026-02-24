@@ -39,8 +39,8 @@ async def forward_request(
         JSONResponse from backend service
     """
     async def _do_request():
-        method = method or request.method
-        body = await request.body() if method in ["POST", "PUT", "PATCH"] else None
+        http_method = method or request.method
+        body = await request.body() if http_method in ["POST", "PUT", "PATCH"] else None
 
         # Build URL with query parameters
         url = service_url
@@ -62,7 +62,7 @@ async def forward_request(
             )
 
         response = await get_http_client().request(
-            method=method,
+            method=http_method,
             url=url,
             content=body,
             headers=headers,
@@ -111,65 +111,6 @@ async def forward_request(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
-        )
-
-
-async def forward_request(
-    request: Request,
-    service_url: str,
-    method: str = None
-):
-    """
-    Generic request forwarding function
-
-    Args:
-        request: The incoming request
-        service_url: The backend service URL
-        method: HTTP method (defaults to request method)
-
-    Returns:
-        JSONResponse from backend service
-    """
-    try:
-        method = method or request.method
-        body = await request.body() if method in ["POST", "PUT", "PATCH"] else None
-
-        # Build URL with query parameters
-        url = service_url
-        if request.url.query:
-            url += f"?{request.url.query}"
-
-        # Filter headers
-        headers = {
-            k: v for k, v in request.headers.items()
-            if k.lower() not in ['host', 'content-length']
-        }
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            auth_response = await client.request(
-                method=method,
-                url=url,
-                content=body,
-                headers=headers,
-                cookies=request.cookies
-            )
-
-        return JSONResponse(
-            status_code=auth_response.status_code,
-            content=auth_response.json() if auth_response.status_code != 204 else None
-        )
-
-    except httpx.RequestError as e:
-        logger.error(f"App service error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="App service unavailable"
-        )
-    except httpx.HTTPStatusError as e:
-        logger.error(f"App service returned error: {e}")
-        raise HTTPException(
-            status_code=e.response.status_code,
-            detail=e.response.json()
         )
 
 
