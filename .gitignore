@@ -68,3 +68,5 @@ logs/
 
 # Docker
 docker-compose.override.yml
+test_token_flow.sh
+TOKEN_REFRESH_VERIFICATION.md

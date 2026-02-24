@@ -189,6 +189,20 @@ async def delete_task(task_id: str, request: Request):
     return await forward_request(request, url)
 
 
+@router.post("/tasks/{task_id}/daily-check")
+async def daily_check_task(task_id: str, request: Request):
+    """Mark a task daily check"""
+    url = f"{service_urls.APP_TASKS}/{task_id}/daily-check"
+    return await forward_request(request, url)
+
+
+@router.post("/tasks/bulk")
+async def bulk_task_action(request: Request):
+    """Perform bulk task actions"""
+    url = f"{service_urls.APP_TASKS}/bulk"
+    return await forward_request(request, url)
+
+
 # ============= PROJECTS =============
 
 @router.get("/projects")
