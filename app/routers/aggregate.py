@@ -122,32 +122,60 @@ async def get_dashboard_data(request: Request):
 @router.get("/timer-dashboard")
 async def get_timer_dashboard(request: Request):
     """
-    Aggregate timer-specific data
-    Combines active tasks, recent entries, and projects
+    Proxy timer dashboard request to backend service
+    The backend already has the complete logic for building timer dashboard payload
     """
     try:
-        tasks = [
-            fetch_from_service(f"{service_urls.APP_TASKS}", request, "tasks"),
-            fetch_from_service(f"{service_urls.APP_TIMER_ENTRIES}", request, "timer_entries"),
-            fetch_from_service(f"{service_urls.APP_PROJECTS}", request, "projects"),
-        ]
+        # Build query string from request parameters
+        query_params = dict(request.query_params)
+        query_string = "&".join(f"{k}={v}" for k, v in query_params.items())
+        url = f"{service_urls.APP_TIMER_DASHBOARD}?{query_string}" if query_string else service_urls.APP_TIMER_DASHBOARD
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Forward request to backend service
+        if get_http_client() is None:
+            logger.error("Shared HTTP client not initialized for timer dashboard")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service unavailable"
+            )
 
-        return JSONResponse({
-            "status": "success",
-            "data": {
-                "tasks": results[0] if results[0] else [],
-                "timer_entries": results[1] if results[1] else [],
-                "projects": results[2] if results[2] else [],
-            }
-        })
+        headers = {
+            k: v for k, v in request.headers.items()
+            if k.lower() not in ['host', 'content-length']
+        }
 
+        response = await get_http_client().get(
+            url,
+            headers=headers,
+            cookies=request.cookies
+        )
+
+        if response.status_code == 200:
+            # Return the backend response as-is
+            return JSONResponse(
+                content=response.json(),
+                status_code=response.status_code
+            )
+        else:
+            logger.error(f"Backend timer dashboard returned {response.status_code}: {response.text}")
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Backend service error: {response.status_code}"
+            )
+
+    except httpx.RequestError as e:
+        logger.error(f"Error fetching timer dashboard from backend: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to reach backend service"
+        )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error aggregating timer dashboard: {e}")
+        logger.error(f"Unexpected error in timer dashboard: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to aggregate timer data"
+            detail="Failed to fetch timer dashboard data"
         )
 
 

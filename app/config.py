@@ -48,7 +48,6 @@ class Settings(BaseSettings):
     cors_origins: List[str] = [
         "http://localhost:8080",   # Local development
         "http://localhost:3000",   # Local development
-        "https://pwa.goalixa.com",  # STAGING - can be removed later
         "https://app.goalixa.com",   # PRODUCTION
         "https://www.goalixa.com",
         "https://goalixa.com",
@@ -162,6 +161,11 @@ class ServiceURLs:
     )
 
     # App Service - Timer
+    APP_TIMER_DASHBOARD = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/timer/dashboard",
+    )
     APP_TIMER_ENTRIES = _build_service_url(
         settings.app_service_url,
         settings.app_api_prefix,
