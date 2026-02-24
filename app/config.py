@@ -189,5 +189,12 @@ class ServiceURLs:
         "/settings/notifications",
     )
 
+    # App Service - Account
+    APP_ACCOUNT = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/account",
+    )
+
 
 service_urls = ServiceURLs()

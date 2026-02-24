@@ -315,6 +315,12 @@ async def create_todo(request: Request):
 
 # ============= REMINDERS =============
 
+@router.get("/account")
+async def get_account(request: Request):
+    """Get user account data"""
+    return await forward_request(request, service_urls.APP_ACCOUNT)
+
+
 @router.get("/reminders")
 async def get_reminders(request: Request):
     """Get all reminders"""
@@ -355,6 +361,20 @@ async def get_reports_summary(request: Request):
 async def get_timer_entries(request: Request):
     """Get timer entries"""
     return await forward_request(request, service_urls.APP_TIMER_ENTRIES)
+
+
+@router.get("/timer/dashboard")
+async def get_timer_dashboard(request: Request):
+    """Get timer dashboard"""
+    return await forward_request(request, service_urls.APP_TIMER_DASHBOARD)
+
+
+# ============= CALENDAR =============
+
+@router.get("/calendar/board")
+async def get_calendar_board(request: Request):
+    """Get calendar board data"""
+    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/calendar/board")
 
 
 # ============= SETTINGS =============
