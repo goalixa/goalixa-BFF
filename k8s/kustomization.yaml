@@ -10,6 +10,6 @@ resources:
 images:
   - name: YOUR_REGISTRY/bff-service
     newName: harbor.goalixa.com/goalixa-bff/bff
-    newTag: latest  # Change this to specific commit SHA for each deployment
+    newTag: sha-placeholder
 
 # Secret is managed separately - create using kubectl create secret generic
