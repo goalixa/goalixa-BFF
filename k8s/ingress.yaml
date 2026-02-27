@@ -1,6 +1,6 @@
 ---
 # BFF Ingress Configuration - PRODUCTION
-# Using app.goalixa.com for production
+# Using app.goalixa.com for production with path-based routing
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -9,7 +9,7 @@ metadata:
   annotations:
     # Traefik specific annotations
     traefik.ingress.kubernetes.io/router.entrypoints: web
-    traefik.ingress.kubernetes.io/router.priority: "100"
+    traefik.ingress.kubernetes.io/router.priority: "200"
 
 spec:
   ingressClassName: traefik
@@ -22,31 +22,9 @@ spec:
   - host: app.goalixa.com  # Production domain
     http:
       paths:
-      # BFF API endpoints
+      # BFF API endpoints at /bff path
       - path: /bff
         pathType: Prefix
-        backend:
-          service:
-            name: bff-service
-            port:
-              number: 8000
-      # Health checks (no auth required)
-      - path: /health
-        pathType: Exact
-        backend:
-          service:
-            name: bff-service
-            port:
-              number: 8000
-      - path: /liveness
-        pathType: Exact
-        backend:
-          service:
-            name: bff-service
-            port:
-              number: 8000
-      - path: /readiness
-        pathType: Exact
         backend:
           service:
             name: bff-service
