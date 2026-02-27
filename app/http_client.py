@@ -16,6 +16,6 @@ def get_http_client():
 
 
 def set_http_client(client):
-    """Set the shared HTTP client instance"""
+    """Set the shared HTTP client instance""
     global http_client
     http_client = client
