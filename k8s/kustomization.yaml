@@ -10,6 +10,6 @@ resources:
 images:
   - name: YOUR_REGISTRY/bff-service
     newName: harbor.goalixa.com/goalixa-bff/bff
-    newTag: 1db3748
+    newTag: 0b78b4d
 
 # Secret is managed separately - create using kubectl create secret generic
