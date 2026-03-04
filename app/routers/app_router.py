@@ -276,6 +276,13 @@ async def toggle_subgoal(subgoal_id: str, request: Request):
     return await forward_request(request, url)
 
 
+@router.post("/goals/{goal_id}/subgoals")
+async def add_goal_subgoal(goal_id: str, request: Request):
+    """Add a subgoal to a goal"""
+    url = f"{settings.app_service_url}{settings.app_api_prefix}/goals/{goal_id}/subgoals"
+    return await forward_request(request, url)
+
+
 # ============= HABITS =============
 
 @router.get("/habits")
