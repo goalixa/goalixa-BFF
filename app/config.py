@@ -126,6 +126,7 @@ class ServiceURLs:
     APP_TASK_STOP = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
     APP_TASK_COMPLETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
     APP_TASK_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
+    APP_TASK_REOPEN = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
 
     # App Service - Projects
     APP_PROJECTS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
@@ -172,6 +173,13 @@ class ServiceURLs:
         settings.app_service_url,
         settings.app_api_prefix,
         "/timer/entries",
+    )
+
+    # App Service - Daily Target
+    APP_DAILY_TARGET = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/daily-target",
     )
 
     # App Service - Settings

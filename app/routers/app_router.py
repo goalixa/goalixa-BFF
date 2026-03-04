@@ -167,6 +167,16 @@ async def start_task(task_id: str, request: Request):
     url = f"{service_urls.APP_TASK_START}/{task_id}/start"
     return await forward_request(request, url)
 
+@router.post("/tasks/{task_id}/reopen")
+async def reopen_task(task_id: str, request: Request):
+    """Reopen a completed task"""
+    url = f"{service_urls.APP_TASK_REOPEN}/{task_id}/reopen"
+    return await forward_request(request, url)
+
+@router.post("/daily-target")
+async def set_daily_target(request: Request):
+    """Set daily target"""
+    return await forward_request(request, service_urls.APP_DAILY_TARGET)
 
 @router.post("/tasks/{task_id}/stop")
 async def stop_task(task_id: str, request: Request):
@@ -284,6 +294,27 @@ async def create_habit(request: Request):
 async def track_habit(habit_id: str, request: Request):
     """Track habit completion"""
     url = f"{service_urls.APP_HABIT_TRACK}/{habit_id}/track"
+    return await forward_request(request, url)
+
+
+@router.post("/habits/{habit_id}/toggle")
+async def toggle_habit(habit_id: str, request: Request):
+    """Toggle habit completion"""
+    url = f"{service_urls.APP_HABITS}/{habit_id}/toggle"
+    return await forward_request(request, url)
+
+
+@router.post("/habits/{habit_id}/update")
+async def update_habit(habit_id: str, request: Request):
+    """Update a habit"""
+    url = f"{service_urls.APP_HABITS}/{habit_id}/update"
+    return await forward_request(request, url)
+
+
+@router.post("/habits/{habit_id}/delete")
+async def delete_habit(habit_id: str, request: Request):
+    """Delete a habit"""
+    url = f"{service_urls.APP_HABITS}/{habit_id}/delete"
     return await forward_request(request, url)
 
 
