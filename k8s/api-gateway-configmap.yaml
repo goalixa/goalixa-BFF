@@ -28,7 +28,7 @@ data:
         }
 
         upstream app_service {
-            server goalixa.goalixa-app.svc.cluster.local:80;
+            server core-api.core-api.svc.cluster.local:80;
             keepalive 32;
         }
 

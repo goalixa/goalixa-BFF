@@ -43,9 +43,9 @@ spec:
           value: "http://auth.goalixa-auth.svc.cluster.local:80"
         - name: AUTH_API_PREFIX
           value: "/api"
-        # App Service - service: goalixa in namespace: goalixa-app
+        # App Service - service: goalixa in namespace: core-api
         - name: APP_SERVICE_URL
-          value: "http://goalixa.goalixa-app.svc.cluster.local:80"
+          value: "http://core-api.core-api.svc.cluster.local:80"
         - name: APP_API_PREFIX
           value: "/api"
         # Redis - disabled for now, enable when ready
