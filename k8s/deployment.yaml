@@ -120,15 +120,8 @@ metadata:
   labels:
     name: goalixa-bff
 ---
-# Secret for JWT (example - use proper secret management in production)
-apiVersion: v1
-kind: Secret
-metadata:
-  name: bff-secrets
-  namespace: goalixa-bff
-type: Opaque
-stringData:
-  jwt-secret: "your-production-jwt-secret-key-here"
+# Note: bff-secrets secret is managed manually in cluster (not in git)
+# Run: kubectl create secret generic bff-secrets -n goalixa-bff --from-literal=jwt-secret='YOUR_JWT_SECRET_HERE' --dry-run=client -o yaml | kubectl apply -f -
 ---
 # ConfigMap for additional configuration
 apiVersion: v1
