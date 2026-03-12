@@ -40,3 +40,5 @@ spec:
       kind: Deployment
       jsonPointers:
         - /spec/replicas
+        - /spec/template/spec/containers/0/env/8  # JWT_SECRET
+        - /spec/template/spec/containers/0/env/9  # JWT_SECRET
