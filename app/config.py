@@ -2,6 +2,7 @@
 Configuration for BFF Service
 """
 from pydantic_settings import BaseSettings
+from pydantic import Field, field_validator
 from typing import List
 import os
 
@@ -54,7 +55,7 @@ class Settings(BaseSettings):
     ]
 
     # JWT Settings (for token validation if needed)
-    jwt_secret: str = os.getenv("JWT_SECRET", "your-secret-key")
+    jwt_secret: str = Field(default=None)  # Must be set via environment variable
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
@@ -65,6 +66,15 @@ class Settings(BaseSettings):
     redis_url: str = "redis://redis.harbor.svc.cluster.local:6379/0"
     redis_enabled: bool = False
     cache_ttl_seconds: int = 300  # 5 minutes default
+
+    # Cache TTL for different data types (in seconds)
+    cache_ttl_user_profile: int = 600  # 10 minutes - user data changes infrequently
+    cache_ttl_user_tasks: int = 60  # 1 minute - task data changes frequently
+    cache_ttl_projects: int = 300  # 5 minutes - projects change moderately
+    cache_ttl_goals: int = 300  # 5 minutes - goals change moderately
+    cache_ttl_labels: int = 600  # 10 minutes - labels change infrequently
+    cache_ttl_dashboard: int = 120  # 2 minutes - dashboard data changes frequently
+    cache_ttl_aggregate: int = 180  # 3 minutes - aggregate data
 
     # Security
     allowed_hosts: List[str] = [
@@ -87,12 +97,33 @@ class Settings(BaseSettings):
     connect_timeout: float = 10.0
     http_verify_tls: bool = os.getenv("HTTP_VERIFY_TLS", "1") == "1"
 
+    # HTTP Client Connection Pool Settings
+    http_max_connections: int = int(os.getenv("HTTP_MAX_CONNECTIONS", "100"))
+    http_max_keepalive_connections: int = int(os.getenv("HTTP_MAX_KEEPALIVE_CONNECTIONS", "50"))
+    http_keepalive_expiry: float = float(os.getenv("HTTP_KEEPALIVE_EXPIRY", "30.0"))
+    http_retries: int = int(os.getenv("HTTP_RETRIES", "3"))
+
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"
 
     # Health Check
     health_check_interval: int = 30
+
+    @field_validator("jwt_secret")
+    @classmethod
+    def validate_jwt_secret(cls, v):
+        if v is None:
+            raise ValueError(
+                "JWT_SECRET must be set via environment variable. "
+                "This is required for secure token validation."
+            )
+        if len(v) < 32:
+            raise ValueError(
+                "JWT_SECRET must be at least 32 characters long for security. "
+                "Please use a strong, randomly generated secret."
+            )
+        return v
 
     class Config:
         env_file = ".env"

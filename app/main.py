@@ -158,16 +158,22 @@ async def lifespan(app: FastAPI):
 
     # Initialize HTTP client with connection pooling
     limits = httpx.Limits(
-        max_keepalive_connections=50,
-        max_connections=100,
-        keepalive_expiry=30.0
+        max_keepalive_connections=settings.http_max_keepalive_connections,
+        max_connections=settings.http_max_connections,
+        keepalive_expiry=settings.http_keepalive_expiry
     )
-    timeout = httpx.Timeout(30.0, connect=10.0)
+    timeout = httpx.Timeout(settings.request_timeout, connect=settings.connect_timeout)
 
     http_client = httpx.AsyncClient(
         limits=limits,
         timeout=timeout,
         verify=settings.http_verify_tls
+    )
+
+    logger.info(
+        f"HTTP client configured: max_connections={settings.http_max_connections}, "
+        f"max_keepalive={settings.http_max_keepalive_connections}, "
+        f"keepalive_expiry={settings.http_keepalive_expiry}s"
     )
 
     # Set the shared HTTP client in the http_client module
@@ -205,9 +211,23 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+        "Cookie",
+        "Set-Cookie",
+    ],
+    expose_headers=[
+        "Content-Type",
+        "Authorization",
+        "Set-Cookie",
+    ],
 )
 
 # GZip Middleware for response compression

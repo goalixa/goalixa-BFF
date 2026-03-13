@@ -4,6 +4,7 @@ Provides caching functionality for frequently accessed data
 """
 import json
 import logging
+import hashlib
 from typing import Optional, Any, Callable
 from functools import wraps
 import asyncio
@@ -11,6 +12,42 @@ import asyncio
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def generate_cache_key(prefix: str, *args, **kwargs) -> str:
+    """
+    Generate a safe cache key that prevents collisions.
+
+    Uses SHA256 hash of the arguments to ensure unique keys.
+
+    Args:
+        prefix: Cache key prefix (e.g., "user:", "tasks:")
+        *args: Function arguments
+        **kwargs: Function keyword arguments
+
+    Returns:
+        A unique cache key
+    """
+    # Create a deterministic string representation of arguments
+    key_parts = []
+
+    # Add positional args (excluding self/class)
+    for arg in args:
+        if not isinstance(arg, (type,)):  # Skip class/type objects
+            arg_str = json.dumps(arg, sort_keys=True, default=str)
+            key_parts.append(arg_str)
+
+    # Add keyword args (sorted for consistency)
+    for k in sorted(kwargs.keys()):
+        v = kwargs[k]
+        if not isinstance(v, (type,)):  # Skip class/type objects
+            arg_str = json.dumps(v, sort_keys=True, default=str)
+            key_parts.append(f"{k}:{arg_str}")
+
+    # Hash the combined arguments to prevent key collisions and long keys
+    args_hash = hashlib.sha256("|".join(key_parts).encode()).hexdigest()[:16]
+
+    return f"{prefix}:{args_hash}"
 
 # Global Redis client
 redis_client = None
@@ -178,13 +215,19 @@ def cached(
     Decorator for caching function results
 
     Args:
-        key_prefix: Prefix for cache keys
+        key_prefix: Prefix for cache keys (e.g., "user:", "tasks:")
         ttl: Time to live in seconds (default from settings)
-        key_func: Function to generate cache key from arguments
+        key_func: Optional function to generate cache key from arguments.
+                  If not provided, uses generate_cache_key() which hashes
+                  arguments to prevent collisions.
 
     Usage:
         @cached("user:", ttl=300)
         async def get_user(user_id: str):
+            ...
+
+        @cached("tasks:", ttl=60, key_func=lambda user_id: f"{user_id}")
+        async def get_user_tasks(user_id: str):
             ...
     """
     def decorator(func: Callable):
@@ -195,10 +238,12 @@ def cached(
 
             # Generate cache key
             if key_func:
-                cache_key = key_prefix + key_func(*args, **kwargs)
+                # Use custom key function
+                custom_key = key_func(*args, **kwargs)
+                cache_key = f"{key_prefix}:{custom_key}"
             else:
-                # Simple default key generation
-                cache_key = key_prefix + str(args) + str(sorted(kwargs.items()))
+                # Use improved default key generation
+                cache_key = generate_cache_key(key_prefix, *args, **kwargs)
 
             # Try to get from cache
             cached_value = await get(cache_key)

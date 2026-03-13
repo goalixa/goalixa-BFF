@@ -67,7 +67,7 @@ async def get_dashboard_data(request: Request):
     """
     Aggregate dashboard data from multiple services
     This reduces multiple frontend requests into a single BFF call
-    Results are cached for 60 seconds
+    Results are cached for configured TTL
     """
     try:
         # Try to get from cache first
@@ -80,39 +80,72 @@ async def get_dashboard_data(request: Request):
                 logger.debug("Returning cached dashboard data")
                 return JSONResponse(cached_data)
 
+        # Define service endpoints to fetch
+        service_endpoints = [
+            ("tasks", f"{service_urls.APP_TASKS}"),
+            ("projects", f"{service_urls.APP_PROJECTS}"),
+            ("goals", f"{service_urls.APP_GOALS}"),
+            ("habits", f"{service_urls.APP_HABITS}"),
+            ("todos", f"{service_urls.APP_TODOS}"),
+            ("user", service_urls.AUTH_ME),
+        ]
+
         # Fetch data from multiple endpoints in parallel
         tasks = [
-            fetch_from_service(f"{service_urls.APP_TASKS}", request, "tasks"),
-            fetch_from_service(f"{service_urls.APP_PROJECTS}", request, "projects"),
-            fetch_from_service(f"{service_urls.APP_GOALS}", request, "goals"),
-            fetch_from_service(f"{service_urls.APP_HABITS}", request, "habits"),
-            fetch_from_service(f"{service_urls.APP_TODOS}", request, "todos"),
-            fetch_from_service(service_urls.AUTH_ME, request, "user"),
+            fetch_from_service(url, request, name)
+            for name, url in service_endpoints
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
+        # Process results and handle errors properly
         response_data = {
             "status": "success",
-            "data": {
-                "tasks": results[0] if results[0] else [],
-                "projects": results[1] if results[1] else [],
-                "goals": results[2] if results[2] else [],
-                "habits": results[3] if results[3] else [],
-                "todos": results[4] if results[4] else [],
-                "user": results[5] if results[5] else None,
-                "timestamp": asyncio.get_event_loop().time()
-            }
+            "data": {},
+            "errors": [],
+            "timestamp": asyncio.get_event_loop().time()
         }
 
-        # Cache the result
+        service_names = [name for name, _ in service_endpoints]
+        failed_services = []
+
+        for i, (result, service_name) in enumerate(zip(results, service_names)):
+            if isinstance(result, Exception):
+                # Log the error and mark the service as failed
+                logger.error(f"Failed to fetch {service_name}: {result}")
+                failed_services.append(service_name)
+                response_data["data"][service_name] = None if service_name == "user" else []
+            elif result is None:
+                # Service returned None (error in fetch_from_service)
+                failed_services.append(service_name)
+                response_data["data"][service_name] = None if service_name == "user" else []
+            else:
+                # Success - add the data
+                response_data["data"][service_name] = result
+
+        # Add error information if any services failed
+        if failed_services:
+            response_data["errors"] = [
+                f"Failed to fetch data from: {', '.join(failed_services)}"
+            ]
+            logger.warning(f"Dashboard aggregation partially failed: {failed_services}")
+
+            # If critical services (user) failed, return degraded response
+            # Otherwise return success with partial data
+            if "user" in failed_services:
+                response_data["status"] = "degraded"
+            else:
+                response_data["status"] = "partial"
+
+        # Cache the result (even partial results can be cached for a shorter time)
         if settings.redis_enabled:
-            await set(cache_key, response_data, ttl=60)
+            cache_ttl = settings.cache_ttl_dashboard if response_data["status"] == "success" else 60
+            await set(cache_key, response_data, ttl=cache_ttl)
 
         return JSONResponse(response_data)
 
     except Exception as e:
-        logger.error(f"Error aggregating dashboard data: {e}")
+        logger.error(f"Error aggregating dashboard data: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to aggregate dashboard data"
