@@ -214,7 +214,10 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Custom Middlewares
-# Note: Middlewares are processed in reverse order of registration
+# Note: Middlewares are processed in the order they are added (top to bottom)
+# 1. RateLimitMiddleware - applies to all requests (including unauthenticated)
+# 2. AuthMiddleware - validates authentication for protected endpoints
+# 3. LoggingMiddleware - logs all requests after processing
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(AuthMiddleware, http_client=http_client)
 app.add_middleware(LoggingMiddleware)

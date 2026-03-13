@@ -67,7 +67,13 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = 300  # 5 minutes default
 
     # Security
-    allowed_hosts: List[str] = ["*"]
+    allowed_hosts: List[str] = [
+        "localhost",
+        "127.0.0.1",
+        "app.goalixa.com",
+        "www.goalixa.com",
+        "goalixa.com",
+    ]
     secure_cookies: bool = True
     cookie_domain: str = ".goalixa.com"
 
@@ -118,7 +124,7 @@ class ServiceURLs:
         settings.auth_api_prefix,
         "/password-reset/confirm",
     )
-    AUTH_GOOGLE = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/google")
+    AUTH_GOOGLE = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/oauth/google/start")
     AUTH_VERIFY_EMAIL = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/verify-email")
 
     # App Service - Tasks
