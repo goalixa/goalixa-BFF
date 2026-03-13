@@ -161,6 +161,13 @@ async def create_task(request: Request):
     return await forward_request(request, service_urls.APP_TASKS)
 
 
+@router.post("/tasks/{task_id}/edit")
+async def edit_task(task_id: str, request: Request):
+    """Edit a task"""
+    url = f"{service_urls.APP_TASK_EDIT}/{task_id}/edit"
+    return await forward_request(request, url)
+
+
 @router.post("/tasks/{task_id}/start")
 async def start_task(task_id: str, request: Request):
     """Start a task timer"""

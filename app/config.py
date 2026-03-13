@@ -122,6 +122,7 @@ class ServiceURLs:
 
     # App Service - Tasks
     APP_TASKS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
+    APP_TASK_EDIT = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
     APP_TASK_START = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
     APP_TASK_STOP = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
     APP_TASK_COMPLETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
