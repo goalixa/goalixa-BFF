@@ -234,6 +234,13 @@ async def create_project(request: Request):
     return await forward_request(request, service_urls.APP_PROJECTS)
 
 
+@router.post("/projects/{project_id}/update")
+async def update_project(project_id: str, request: Request):
+    """Update a project"""
+    url = f"{service_urls.APP_PROJECT_UPDATE}/{project_id}/update"
+    return await forward_request(request, url)
+
+
 @router.post("/projects/{project_id}/delete")
 async def delete_project(project_id: str, request: Request):
     """Delete a project"""
@@ -346,6 +353,20 @@ async def create_todo(request: Request):
     return await forward_request(request, service_urls.APP_TODOS)
 
 
+@router.post("/todos/{todo_id}/toggle")
+async def toggle_todo(todo_id: str, request: Request):
+    """Toggle a todo"""
+    url = f"{service_urls.APP_TODOS}/{todo_id}/toggle"
+    return await forward_request(request, url)
+
+
+@router.post("/todos/{todo_id}/delete")
+async def delete_todo(todo_id: str, request: Request):
+    """Delete a todo"""
+    url = f"{service_urls.APP_TODOS}/{todo_id}/delete"
+    return await forward_request(request, url)
+
+
 # ============= REMINDERS =============
 
 @router.get("/account")
@@ -366,6 +387,27 @@ async def create_reminder(request: Request):
     return await forward_request(request, service_urls.APP_REMINDERS)
 
 
+@router.post("/reminders/{reminder_id}/update")
+async def update_reminder(reminder_id: str, request: Request):
+    """Update a reminder"""
+    url = f"{service_urls.APP_REMINDER_UPDATE}/{reminder_id}/update"
+    return await forward_request(request, url)
+
+
+@router.post("/reminders/{reminder_id}/toggle")
+async def toggle_reminder(reminder_id: str, request: Request):
+    """Toggle a reminder"""
+    url = f"{service_urls.APP_REMINDER_TOGGLE}/{reminder_id}/toggle"
+    return await forward_request(request, url)
+
+
+@router.post("/reminders/{reminder_id}/delete")
+async def delete_reminder(reminder_id: str, request: Request):
+    """Delete a reminder"""
+    url = f"{service_urls.APP_REMINDER_DELETE}/{reminder_id}/delete"
+    return await forward_request(request, url)
+
+
 # ============= LABELS =============
 
 @router.get("/labels")
@@ -378,6 +420,20 @@ async def get_labels(request: Request):
 async def create_label(request: Request):
     """Create a new label"""
     return await forward_request(request, service_urls.APP_LABELS)
+
+
+@router.post("/labels/{label_id}/edit")
+async def update_label(label_id: str, request: Request):
+    """Update a label"""
+    url = f"{service_urls.APP_LABEL_EDIT}/{label_id}/edit"
+    return await forward_request(request, url)
+
+
+@router.post("/labels/{label_id}/delete")
+async def delete_label(label_id: str, request: Request):
+    """Delete a label"""
+    url = f"{service_urls.APP_LABELS}/{label_id}/delete"
+    return await forward_request(request, url)
 
 
 @router.get("/planner")

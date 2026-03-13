@@ -274,6 +274,19 @@ async def password_reset_confirm(request: Request):
         )
 
 
+@router.post("/verify-email")
+async def verify_email(request: Request):
+    """Forward email verification request"""
+    try:
+        return await _forward_auth_request("POST", service_urls.AUTH_VERIFY_EMAIL, request)
+    except httpx.RequestError as e:
+        logger.error(f"Auth service error during email verification: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable"
+        )
+
+
 @router.get("/google")
 async def google_login():
     """Get Google OAuth URL"""

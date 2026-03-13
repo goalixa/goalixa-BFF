@@ -119,6 +119,7 @@ class ServiceURLs:
         "/password-reset/confirm",
     )
     AUTH_GOOGLE = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/google")
+    AUTH_VERIFY_EMAIL = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/verify-email")
 
     # App Service - Tasks
     APP_TASKS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
@@ -131,6 +132,7 @@ class ServiceURLs:
 
     # App Service - Projects
     APP_PROJECTS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
+    APP_PROJECT_UPDATE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
     APP_PROJECT_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
 
     # App Service - Goals
@@ -153,9 +155,13 @@ class ServiceURLs:
 
     # App Service - Reminders
     APP_REMINDERS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
+    APP_REMINDER_UPDATE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
+    APP_REMINDER_TOGGLE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
+    APP_REMINDER_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
 
     # App Service - Labels
     APP_LABELS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/labels")
+    APP_LABEL_EDIT = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/labels")
 
     # App Service - Reports
     APP_REPORTS_SUMMARY = _build_service_url(
