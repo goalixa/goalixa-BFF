@@ -312,3 +312,43 @@ async def google_login():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication service unavailable"
         )
+
+
+@router.get("/sessions")
+async def list_sessions(request: Request):
+    """List all active sessions for the current user"""
+    try:
+        return await _forward_auth_request("GET", service_urls.AUTH_SESSIONS, request)
+    except httpx.RequestError as e:
+        logger.error(f"Auth service error during session listing: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable"
+        )
+
+
+@router.post("/sessions/revoke-all")
+async def revoke_all_sessions(request: Request):
+    """Revoke all sessions except the current one"""
+    try:
+        return await _forward_auth_request("POST", service_urls.AUTH_SESSIONS_REVOKE_ALL, request)
+    except httpx.RequestError as e:
+        logger.error(f"Auth service error during revoke all sessions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable"
+        )
+
+
+@router.post("/sessions/{token_id}/revoke")
+async def revoke_session(token_id: int, request: Request):
+    """Revoke a specific session"""
+    url = f"{service_urls.AUTH_SESSION}/{token_id}/revoke"
+    try:
+        return await _forward_auth_request("POST", url, request)
+    except httpx.RequestError as e:
+        logger.error(f"Auth service error during session revocation: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable"
+        )

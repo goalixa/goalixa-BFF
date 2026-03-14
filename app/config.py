@@ -157,6 +157,8 @@ class ServiceURLs:
     )
     AUTH_GOOGLE = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/oauth/google/start")
     AUTH_VERIFY_EMAIL = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/verify-email")
+    AUTH_SESSION = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/sessions")
+    AUTH_SESSIONS_REVOKE_ALL = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/sessions/revoke-all")
 
     # App Service - Tasks
     APP_TASKS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
