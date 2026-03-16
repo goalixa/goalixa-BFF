@@ -1,0 +1,27 @@
+# Production values for goalixa-bff
+# Override default values for production environment
+
+image:
+  tag: "latest"  # Overridden by GitHub workflow
+
+replicaCount: 3
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+env:
+  LOG_LEVEL: "WARNING"
+  REDIS_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "1000"

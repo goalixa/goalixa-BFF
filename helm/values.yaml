@@ -1,0 +1,111 @@
+# Default values for goalixa-bff
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Image configuration
+image:
+  registry: harbor.goalixa.com
+  repository: goalixa-bff/bff
+  tag: "latest"  # Overridden by GitHub workflow
+  pullPolicy: Always
+
+# Deployment configuration
+replicaCount: 2
+
+# Container configuration
+container:
+  port: 8000
+
+# Environment variables
+env:
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  # Auth Service
+  AUTH_SERVICE_URL: "http://auth.goalixa-auth.svc.cluster.local:80"
+  AUTH_API_PREFIX: "/api"
+  # App Service
+  APP_SERVICE_URL: "http://core-api.core-api.svc.cluster.local:80"
+  APP_API_PREFIX: "/api"
+  # Redis
+  REDIS_URL: "redis://redis.redis.svc.cluster.local:6379/0"
+  REDIS_ENABLED: "false"
+  # Security
+  SECURE_COOKIES: "true"
+  COOKIE_DOMAIN: ".goalixa.com"
+  # Logging
+  LOG_LEVEL: "INFO"
+  # Rate limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_PERIOD: "60"
+
+# ConfigMap data
+configMap:
+  corsOrigins: '["https://app.goalixa.com","https://www.goalixa.com"]'
+  cacheTtl: "300"
+
+# Secret references (must be created manually)
+# kubectl create secret generic bff-secrets \
+#   --from-literal=jwt-secret='your-jwt-secret' \
+#   -n goalixa-bff
+secretName: bff-secrets
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+# Health probes
+livenessProbe:
+  httpGet:
+    path: /liveness
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /readiness
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Autoscaling (optional)
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Namespace
+namespace:
+  name: goalixa-bff

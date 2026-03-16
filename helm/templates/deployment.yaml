@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bff
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "goalixa-bff.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "goalixa-bff.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "goalixa-bff.selectorLabels" . | nindent 8 }}
+        app: bff
+        version: v1
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+    spec:
+      containers:
+        - name: bff
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.container.port }}
+              protocol: TCP
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.env.ENVIRONMENT | quote }}
+            - name: DEBUG
+              value: {{ .Values.env.DEBUG | quote }}
+            - name: AUTH_SERVICE_URL
+              value: {{ .Values.env.AUTH_SERVICE_URL | quote }}
+            - name: AUTH_API_PREFIX
+              value: {{ .Values.env.AUTH_API_PREFIX | quote }}
+            - name: APP_SERVICE_URL
+              value: {{ .Values.env.APP_SERVICE_URL | quote }}
+            - name: APP_API_PREFIX
+              value: {{ .Values.env.APP_API_PREFIX | quote }}
+            - name: REDIS_URL
+              value: {{ .Values.env.REDIS_URL | quote }}
+            - name: REDIS_ENABLED
+              value: {{ .Values.env.REDIS_ENABLED | quote }}
+            - name: SECURE_COOKIES
+              value: {{ .Values.env.SECURE_COOKIES | quote }}
+            - name: COOKIE_DOMAIN
+              value: {{ .Values.env.COOKIE_DOMAIN | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.env.LOG_LEVEL | quote }}
+            - name: RATE_LIMIT_ENABLED
+              value: {{ .Values.env.RATE_LIMIT_ENABLED | quote }}
+            - name: RATE_LIMIT_REQUESTS
+              value: {{ .Values.env.RATE_LIMIT_REQUESTS | quote }}
+            - name: RATE_LIMIT_PERIOD
+              value: {{ .Values.env.RATE_LIMIT_PERIOD | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: jwt-secret
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bff-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "goalixa-bff.labels" . | nindent 4 }}
+data:
+  cors-origins: {{ .Values.configMap.corsOrigins | quote }}
+  cache-ttl: {{ .Values.configMap.cacheTtl | quote }}

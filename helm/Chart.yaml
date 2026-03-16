@@ -1,0 +1,13 @@
+apiVersion: v2
+name: goalixa-bff
+description: Goalixa Backend for Frontend - API Gateway with caching and rate limiting
+type: application
+version: 1.0.0
+appVersion: "1.0"
+keywords:
+  - bff
+  - api-gateway
+  - backend-for-frontend
+maintainers:
+  - name: Goalixa
+    email: dev@goalixa.com
