@@ -58,11 +58,6 @@ spec:
               value: {{ .Values.env.RATE_LIMIT_REQUESTS | quote }}
             - name: RATE_LIMIT_PERIOD
               value: {{ .Values.env.RATE_LIMIT_PERIOD | quote }}
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secretName }}
-                  key: jwt-secret
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

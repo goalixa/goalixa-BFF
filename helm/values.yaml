@@ -44,12 +44,6 @@ configMap:
   corsOrigins: '["https://app.goalixa.com","https://www.goalixa.com"]'
   cacheTtl: "300"
 
-# Secret references (must be created manually)
-# kubectl create secret generic bff-secrets \
-#   --from-literal=jwt-secret='your-jwt-secret' \
-#   -n goalixa-bff
-secretName: bff-secrets
-
 # Service configuration
 service:
   type: ClusterIP
