@@ -29,6 +29,11 @@ spec:
             - name: http
               containerPort: {{ .Values.container.port }}
               protocol: TCP
+          envFrom:
+            - secretRef:
+                name: bff-secrets
+            - configMapRef:
+                name: bff-config
           env:
             - name: ENVIRONMENT
               value: {{ .Values.env.ENVIRONMENT | quote }}
