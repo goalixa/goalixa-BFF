@@ -298,9 +298,18 @@ async def google_login():
             )
 
         auth_response = await get_http_client().get(
-            service_urls.AUTH_GOOGLE
+            service_urls.AUTH_GOOGLE,
+            follow_redirects=False  # Don't follow redirects automatically
         )
 
+        # If auth service returns a redirect, forward it to the client
+        if auth_response.status_code in (301, 302, 303, 307, 308):
+            return Response(
+                status_code=auth_response.status_code,
+                headers={"Location": auth_response.headers.get("location")}
+            )
+
+        # For JSON responses (errors), forward them as-is
         return JSONResponse(
             status_code=auth_response.status_code,
             content=auth_response.json()
