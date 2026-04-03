@@ -6,6 +6,9 @@ image:
 
 replicaCount: 3
 
+namespace:
+  name: goalixa-bff
+
 resources:
   limits:
     cpu: 1000m
