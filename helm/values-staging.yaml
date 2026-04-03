@@ -6,6 +6,17 @@ image:
 
 replicaCount: 1
 
+namespace:
+  name: goalixa-bff-staging
+
+env:
+  LOG_LEVEL: "DEBUG"
+  DEBUG: "true"
+  REDIS_ENABLED: "false"
+  # Staging service URLs
+  AUTH_SERVICE_URL: "http://goalixa-auth.goalixa-auth-staging.svc.cluster.local:80"
+  APP_SERVICE_URL: "http://core-api.core-api-staging.svc.cluster.local:80"
+
 resources:
   limits:
     cpu: 500m
