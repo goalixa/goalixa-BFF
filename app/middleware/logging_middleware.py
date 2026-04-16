@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     """
-    Middleware to log all requests and responses
+    Middleware to log all requests and responses.
     """
 
     async def dispatch(self, request: Request, call_next):
