@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class MetricsHelper:
-    """Helper class for recording metrics""".
+    """Helper class for recording metrics"""
 
     @staticmethod
     def record_backend_request(
