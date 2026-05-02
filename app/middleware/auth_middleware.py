@@ -29,6 +29,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self.http_client = http_client
 
         # Public endpoints that don't require authentication
+        # Note: Paths here should match what the service receives after ingress rewriting
+        # Ingress rewrites /bff/auth/* to /auth/* before forwarding
         self.public_paths = {
             "/",
             "/health",
@@ -38,13 +40,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/docs",
             "/redoc",
             "/openapi.json",
-            "/bff/auth/login",
-            "/bff/auth/register",
-            "/bff/auth/forgot",
-            "/bff/auth/password-reset/request",
-            "/bff/auth/password-reset/confirm",
-            "/bff/auth/google",
-            "/bff/auth/refresh",
+            "/auth/login",
+            "/auth/register",
+            "/auth/forgot",
+            "/auth/password-reset/request",
+            "/auth/password-reset/confirm",
+            "/auth/google",
+            "/auth/refresh",
         }
 
     def _is_public_path(self, path: str) -> bool:
@@ -53,13 +55,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return True
 
         # Check for path prefixes
+        # Note: These should match paths after ingress rewriting (without /bff prefix)
         public_prefixes = [
-            "/bff/auth/login",
-            "/bff/auth/register",
-            "/bff/auth/forgot",
-            "/bff/auth/password-reset",
-            "/bff/auth/google",
-            "/bff/auth/refresh",
+            "/auth/login",
+            "/auth/register",
+            "/auth/forgot",
+            "/auth/password-reset",
+            "/auth/google",
+            "/auth/refresh",
         ]
         return any(path.startswith(prefix) for prefix in public_prefixes)
 

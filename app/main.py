@@ -243,10 +243,11 @@ app.add_middleware(AuthMiddleware, http_client=http_client)
 app.add_middleware(LoggingMiddleware)
 
 # Include routers
+# Note: Paths don't include /bff prefix because ingress rewrites /bff/* to /* before forwarding
 app.include_router(health.router, tags=["Health"])
-app.include_router(auth.router, prefix="/bff/auth", tags=["Auth"])
-app.include_router(app_router.router, prefix="/bff/app", tags=["App"])
-app.include_router(aggregate.router, prefix="/bff/aggregate", tags=["Aggregate"])
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(app_router.router, prefix="/app", tags=["App"])
+app.include_router(aggregate.router, prefix="/aggregate", tags=["Aggregate"])
 
 # Metrics endpoint for Prometheus scraping
 @app.get("/metrics")
@@ -265,9 +266,9 @@ async def root():
         "endpoints": {
             "health": "/health",
             "docs": "/docs",
-            "auth": "/bff/auth/*",
-            "app": "/bff/app/*",
-            "aggregate": "/bff/aggregate/*",
+            "auth": "/auth/*",
+            "app": "/app/*",
+            "aggregate": "/aggregate/*",
             "metrics": "/metrics"
         }
     }
