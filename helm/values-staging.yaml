@@ -8,16 +8,41 @@ image:
 
 replicaCount: 1
 
+container:
+  port: 8000
+
 namespace:
   name: goalixa-bff-staging
 
 env:
-  LOG_LEVEL: "DEBUG"
+  ENVIRONMENT: "staging"
   DEBUG: "true"
-  REDIS_ENABLED: "false"
-  # Staging service URLs
-  AUTH_SERVICE_URL: "http://goalixa-auth.goalixa-auth-staging.svc.cluster.local:80"
+  # Auth Service
+  AUTH_SERVICE_URL: "http://auth.goalixa-auth-staging.svc.cluster.local:80"
+  AUTH_API_PREFIX: "/api"
+  # App Service
   APP_SERVICE_URL: "http://core-api.core-api-staging.svc.cluster.local:80"
+  APP_API_PREFIX: "/api"
+  # Redis
+  REDIS_URL: "redis://redis.redis.svc.cluster.local:6379/0"
+  REDIS_ENABLED: "false"
+  # Security
+  SECURE_COOKIES: "true"
+  COOKIE_DOMAIN: ".goalixa.com"
+  # Logging
+  LOG_LEVEL: "DEBUG"
+  # Rate limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "100"
+  RATE_LIMIT_PERIOD: "60"
+
+configMap:
+  corsOrigins: '["https://staging.goalixa.com","https://www.staging.goalixa.com"]'
+  cacheTtl: "300"
+
+service:
+  type: ClusterIP
+  port: 8000
 
 resources:
   limits:
@@ -30,7 +55,23 @@ resources:
 autoscaling:
   enabled: false
 
-env:
-  LOG_LEVEL: "DEBUG"
-  DEBUG: "true"
-  REDIS_ENABLED: "false"
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  hosts:
+    - host: staging.goalixa.com
+      paths:
+        - path: /bff(/|$)(.*)
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: staging-goalixa-bff-tls
+      hosts:
+        - staging.goalixa.com
