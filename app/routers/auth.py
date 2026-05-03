@@ -71,8 +71,12 @@ async def _forward_auth_request(
 
             headers = {
                 k: v for k, v in request.headers.items()
-                if k.lower() not in ['host', 'content-length'] if not include_body or k.lower() != 'content-length'
+                if k.lower() not in ['host', 'content-length']
             }
+
+            # Ensure Content-Type is preserved for JSON requests
+            if body and 'content-type' not in {k.lower() for k in headers}:
+                headers['Content-Type'] = 'application/json'
 
             response = await get_http_client().request(
                 method=method,
