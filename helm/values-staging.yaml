@@ -2,7 +2,9 @@
 # Override default values for staging environment
 
 image:
-  tag: "latest"  # Overridden by GitHub workflow
+  registry: harbor.goalixa.com
+  repository: bff-staging/bff
+  tag: "latest"
 
 replicaCount: 1
 

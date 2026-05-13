@@ -28,7 +28,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Prometheus Metrics
+# Prometheus Metrics.
 # Request metrics
 REQUEST_COUNT = Counter(
     'bff_request_count',
