@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Global HTTP client instance (initialized in main.py)
+# Global HTTP client instance (initialized in main.py).
 http_client = None
 
 
