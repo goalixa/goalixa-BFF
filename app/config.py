@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # Backend Services URLs (configure for your environment)
+    # Backend Services URLs (configure for your environment).
     auth_service_url: str = os.getenv("AUTH_SERVICE_URL", "http://localhost:5001")
     app_service_url: str = os.getenv("APP_SERVICE_URL", "http://localhost:5000")
     auth_api_prefix: str = os.getenv("AUTH_API_PREFIX", "/api")
