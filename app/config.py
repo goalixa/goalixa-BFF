@@ -229,6 +229,13 @@ class ServiceURLs:
         "/daily-target",
     )
 
+    # App Service - Daily Focus
+    APP_DAILY_FOCUS = _build_service_url(
+        settings.app_service_url,
+        settings.app_api_prefix,
+        "/daily-focus",
+    )
+
     # App Service - Settings
     APP_SETTINGS_PROFILE = _build_service_url(
         settings.app_service_url,
