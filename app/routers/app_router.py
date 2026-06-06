@@ -532,3 +532,59 @@ async def get_notification_settings(request: Request):
 async def update_notification_settings(request: Request):
     """Update notification settings"""
     return await forward_request(request, service_urls.APP_SETTINGS_NOTIFICATIONS)
+
+
+# ===== DAILY FOCUS ROUTES =====
+
+@router.get("/daily-focus")
+async def get_daily_focus(request: Request):
+    """Proxy to Core-API daily focus endpoint"""
+    return await forward_request(request, service_urls.APP_DAILY_FOCUS)
+
+
+@router.post("/daily-focus")
+async def add_to_daily_focus(request: Request):
+    """Proxy to Core-API add to daily focus"""
+    return await forward_request(request, service_urls.APP_DAILY_FOCUS)
+
+
+@router.put("/daily-focus/reorder")
+async def reorder_daily_focus(request: Request):
+    """Proxy to Core-API reorder daily focus"""
+    url = f"{service_urls.APP_DAILY_FOCUS}/reorder"
+    return await forward_request(request, url)
+
+
+@router.put("/daily-focus/{item_id}")
+async def update_daily_focus_item(item_id: int, request: Request):
+    """Proxy to Core-API update focus item"""
+    url = f"{service_urls.APP_DAILY_FOCUS}/{item_id}"
+    return await forward_request(request, url)
+
+
+@router.delete("/daily-focus/{item_id}")
+async def remove_from_daily_focus(item_id: int, request: Request):
+    """Proxy to Core-API remove from focus"""
+    url = f"{service_urls.APP_DAILY_FOCUS}/{item_id}"
+    return await forward_request(request, url)
+
+
+@router.post("/daily-focus/{item_id}/complete")
+async def complete_daily_focus_item(item_id: int, request: Request):
+    """Proxy to Core-API complete focus item"""
+    url = f"{service_urls.APP_DAILY_FOCUS}/{item_id}/complete"
+    return await forward_request(request, url)
+
+
+@router.post("/daily-focus/auto-fill")
+async def auto_fill_daily_focus(request: Request):
+    """Proxy to Core-API auto-fill"""
+    url = f"{service_urls.APP_DAILY_FOCUS}/auto-fill"
+    return await forward_request(request, url)
+
+
+@router.post("/daily-focus/carry-over")
+async def carry_over_daily_focus(request: Request):
+    """Proxy to Core-API carry-over"""
+    url = f"{service_urls.APP_DAILY_FOCUS}/carry-over"
+    return await forward_request(request, url)
