@@ -83,11 +83,13 @@ jobs:
           password: ${{ secrets.HARBOR_PASSWORD }}
 
       - name: Build and push Docker image
+        env:
+          DOCKER_BUILDKIT: 0
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.config.outputs.repository }}:latest"
 
-          # Build using plain docker (no buildx)
-          docker build --tag ${IMAGE} .
+          # Build using legacy docker builder (no buildkit)
+          docker build --no-cache --tag ${IMAGE} .
 
           # Push
           docker push ${IMAGE}
