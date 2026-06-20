@@ -87,25 +87,30 @@ jobs:
         with:
           driver: docker
 
-      - name: Test Harbor push with simple image
+      - name: Configure Docker to disable blob mounting
         run: |
-          # Test with a simple alpine image first
-          docker pull alpine:latest
-          docker tag alpine:latest ${{ env.REGISTRY }}/${{ steps.config.outputs.repository }}:test
-          docker push ${{ env.REGISTRY }}/${{ steps.config.outputs.repository }}:test && echo "Simple push works!" || echo "Simple push failed!"
+          # Disable max concurrent uploads to force sequential push
+          mkdir -p ~/.docker
+          echo '{"max-concurrent-uploads": 1}' > ~/.docker/daemon.json
+          # Also set DOCKER_CONFIG for containerd-based registries
+          echo '{}' > ~/.docker/config.json
 
-      - name: Build and push Docker image
+      - name: Build and push with crane
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.config.outputs.repository }}:latest"
 
-          # Build using buildx with output to docker
-          docker buildx build \
-            --output=type=docker \
-            --tag ${IMAGE} \
-            .
+          # Install crane (faster and simpler than docker push)
+          curl -sL "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz" | tar -xzf - crane
 
-          # Push
-          docker push ${IMAGE}
+          # Build image locally
+          docker build --tag ${IMAGE} .
+
+          # Save image as tar
+          docker save ${IMAGE} -o image.tar
+
+          # Push using crane (bypasses Docker's blob mounting)
+          ./crane auth login harbor.goalixa.com -u '${{ secrets.HARBOR_USERNAME }}' -p '${{ secrets.HARBOR_PASSWORD }}'
+          ./crane push image.tar ${IMAGE}
 
       - name: Setup kubectl
         run: |
