@@ -1,6 +1,7 @@
 name: Build & Deploy BFF (Helm)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
