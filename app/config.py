@@ -1,12 +1,14 @@
 """
 Configuration for BFF Service.
 """
+
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 from typing import List
 import os
 
-#trig
+# trig
+
 
 def _normalize_prefix(prefix: str) -> str:
     prefix = (prefix or "").strip()
@@ -48,9 +50,9 @@ class Settings(BaseSettings):
 
     # CORS origins
     cors_origins: List[str] = [
-        "http://localhost:8080",   # Local development
-        "http://localhost:3000",   # Local development
-        "https://app.goalixa.com",   # PRODUCTION
+        "http://localhost:8080",  # Local development
+        "http://localhost:3000",  # Local development
+        "https://app.goalixa.com",  # PRODUCTION
         "https://www.goalixa.com",
         "https://goalixa.com",
     ]
@@ -60,8 +62,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
-    auth_access_cookie_name: str = os.getenv("AUTH_ACCESS_COOKIE_NAME", "goalixa_access")
-    auth_refresh_cookie_name: str = os.getenv("AUTH_REFRESH_COOKIE_NAME", "goalixa_refresh")
+    auth_access_cookie_name: str = os.getenv(
+        "AUTH_ACCESS_COOKIE_NAME", "goalixa_access"
+    )
+    auth_refresh_cookie_name: str = os.getenv(
+        "AUTH_REFRESH_COOKIE_NAME", "goalixa_refresh"
+    )
 
     # Redis (for caching) - disabled by default, enable when ready
     redis_url: str = "redis://redis.harbor.svc.cluster.local:6379/0"
@@ -100,7 +106,9 @@ class Settings(BaseSettings):
 
     # HTTP Client Connection Pool Settings
     http_max_connections: int = int(os.getenv("HTTP_MAX_CONNECTIONS", "100"))
-    http_max_keepalive_connections: int = int(os.getenv("HTTP_MAX_KEEPALIVE_CONNECTIONS", "50"))
+    http_max_keepalive_connections: int = int(
+        os.getenv("HTTP_MAX_KEEPALIVE_CONNECTIONS", "50")
+    )
     http_keepalive_expiry: float = float(os.getenv("HTTP_KEEPALIVE_EXPIRY", "30.0"))
     http_retries: int = int(os.getenv("HTTP_RETRIES", "3"))
 
@@ -140,12 +148,24 @@ class ServiceURLs:
     """Backend service URLs"""
 
     # Auth Service
-    AUTH_LOGIN = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/login")
-    AUTH_REGISTER = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/register")
-    AUTH_LOGOUT = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/logout")
-    AUTH_REFRESH = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/refresh")
-    AUTH_ME = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/me")
-    AUTH_FORGOT = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/forgot")
+    AUTH_LOGIN = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/login"
+    )
+    AUTH_REGISTER = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/register"
+    )
+    AUTH_LOGOUT = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/logout"
+    )
+    AUTH_REFRESH = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/refresh"
+    )
+    AUTH_ME = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/me"
+    )
+    AUTH_FORGOT = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/forgot"
+    )
     AUTH_PASSWORD_RESET_REQUEST = _build_service_url(
         settings.auth_service_url,
         settings.auth_api_prefix,
@@ -156,30 +176,66 @@ class ServiceURLs:
         settings.auth_api_prefix,
         "/password-reset/confirm",
     )
-    AUTH_GOOGLE = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/oauth/google/start")
-    AUTH_VERIFY_EMAIL = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/verify-email")
-    AUTH_SESSION = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/sessions")
-    AUTH_SESSIONS_REVOKE_ALL = _build_service_url(settings.auth_service_url, settings.auth_api_prefix, "/sessions/revoke-all")
+    AUTH_GOOGLE = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/oauth/google/start"
+    )
+    AUTH_VERIFY_EMAIL = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/verify-email"
+    )
+    AUTH_SESSION = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/sessions"
+    )
+    AUTH_SESSIONS_REVOKE_ALL = _build_service_url(
+        settings.auth_service_url, settings.auth_api_prefix, "/sessions/revoke-all"
+    )
 
     # App Service - Tasks
-    APP_TASKS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
-    APP_TASK_EDIT = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
-    APP_TASK_START = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
-    APP_TASK_STOP = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
-    APP_TASK_COMPLETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
-    APP_TASK_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
-    APP_TASK_REOPEN = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/tasks")
+    APP_TASKS = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/tasks"
+    )
+    APP_TASK_EDIT = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/tasks"
+    )
+    APP_TASK_START = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/tasks"
+    )
+    APP_TASK_STOP = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/tasks"
+    )
+    APP_TASK_COMPLETE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/tasks"
+    )
+    APP_TASK_DELETE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/tasks"
+    )
+    APP_TASK_REOPEN = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/tasks"
+    )
 
     # App Service - Projects
-    APP_PROJECTS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
-    APP_PROJECT_UPDATE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
-    APP_PROJECT_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/projects")
+    APP_PROJECTS = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/projects"
+    )
+    APP_PROJECT_UPDATE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/projects"
+    )
+    APP_PROJECT_DELETE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/projects"
+    )
 
     # App Service - Goals
-    APP_GOALS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
-    APP_GOAL_DETAIL = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
-    APP_GOAL_EDIT = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
-    APP_GOAL_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/goals")
+    APP_GOALS = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/goals"
+    )
+    APP_GOAL_DETAIL = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/goals"
+    )
+    APP_GOAL_EDIT = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/goals"
+    )
+    APP_GOAL_DELETE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/goals"
+    )
     APP_GOAL_SUBGOALS = _build_service_url(
         settings.app_service_url,
         settings.app_api_prefix,
@@ -187,21 +243,39 @@ class ServiceURLs:
     )
 
     # App Service - Habits
-    APP_HABITS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/habits")
-    APP_HABIT_TRACK = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/habits")
+    APP_HABITS = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/habits"
+    )
+    APP_HABIT_TRACK = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/habits"
+    )
 
     # App Service - Todos
-    APP_TODOS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/todos")
+    APP_TODOS = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/todos"
+    )
 
     # App Service - Reminders
-    APP_REMINDERS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
-    APP_REMINDER_UPDATE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
-    APP_REMINDER_TOGGLE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
-    APP_REMINDER_DELETE = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/reminders")
+    APP_REMINDERS = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/reminders"
+    )
+    APP_REMINDER_UPDATE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/reminders"
+    )
+    APP_REMINDER_TOGGLE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/reminders"
+    )
+    APP_REMINDER_DELETE = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/reminders"
+    )
 
     # App Service - Labels
-    APP_LABELS = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/labels")
-    APP_LABEL_EDIT = _build_service_url(settings.app_service_url, settings.app_api_prefix, "/labels")
+    APP_LABELS = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/labels"
+    )
+    APP_LABEL_EDIT = _build_service_url(
+        settings.app_service_url, settings.app_api_prefix, "/labels"
+    )
 
     # App Service - Reports
     APP_REPORTS_SUMMARY = _build_service_url(

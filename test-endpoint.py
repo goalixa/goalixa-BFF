@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
+
 @router.get("/test/cicd")
 async def test_cicd():
     """Test endpoint to verify CI/CD deployment"""
@@ -16,5 +17,5 @@ async def test_cicd():
         "service": "Goalixa BFF",
         "message": "CI/CD pipeline is working! 🚀",
         "deployed_at": datetime.utcnow().isoformat(),
-        "version": "test-cicd"
+        "version": "test-cicd",
     }

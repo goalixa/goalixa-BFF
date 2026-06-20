@@ -2,6 +2,7 @@
 Authentication Middleware
 Validates JWT tokens and attaches user info to request state
 """
+
 from fastapi import Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, RedirectResponse
@@ -96,9 +97,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 token = token[7:]
 
             payload = jwt.decode(
-                token,
-                settings.jwt_secret,
-                algorithms=[settings.jwt_algorithm]
+                token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
             )
 
             # Only treat access tokens as authenticated user context.
@@ -109,8 +108,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             # Record successful validation
             try:
                 from app.utils.metrics import MetricsHelper
+
                 duration = time.time() - start_time
-                MetricsHelper.record_auth_validation('local_jwt', duration, True)
+                MetricsHelper.record_auth_validation("local_jwt", duration, True)
             except ImportError:
                 pass
 
@@ -120,8 +120,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.warning("JWT token has expired")
             try:
                 from app.utils.metrics import MetricsHelper
+
                 duration = time.time() - start_time
-                MetricsHelper.record_auth_validation('local_jwt', duration, False, 'expired_token')
+                MetricsHelper.record_auth_validation(
+                    "local_jwt", duration, False, "expired_token"
+                )
             except ImportError:
                 pass
             return None
@@ -129,8 +132,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.warning(f"Invalid JWT token: {e}")
             try:
                 from app.utils.metrics import MetricsHelper
+
                 duration = time.time() - start_time
-                MetricsHelper.record_auth_validation('local_jwt', duration, False, 'invalid_token')
+                MetricsHelper.record_auth_validation(
+                    "local_jwt", duration, False, "invalid_token"
+                )
             except ImportError:
                 pass
             return None
@@ -138,8 +144,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.error(f"Error validating JWT token: {e}")
             try:
                 from app.utils.metrics import MetricsHelper
+
                 duration = time.time() - start_time
-                MetricsHelper.record_auth_validation('local_jwt', duration, False, 'validation_error')
+                MetricsHelper.record_auth_validation(
+                    "local_jwt", duration, False, "validation_error"
+                )
             except ImportError:
                 pass
             return None
@@ -160,36 +169,42 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 logger.error("Shared HTTP client not initialized")
                 try:
                     from app.utils.metrics import MetricsHelper
+
                     duration = time.time() - start_time
-                    MetricsHelper.record_auth_validation('auth_service', duration, False, 'service_error')
+                    MetricsHelper.record_auth_validation(
+                        "auth_service", duration, False, "service_error"
+                    )
                 except ImportError:
                     pass
                 return None
 
             headers = {
-                k: v for k, v in request.headers.items()
-                if k.lower() not in ['host']
+                k: v for k, v in request.headers.items() if k.lower() not in ["host"]
             }
 
             response = await get_http_client().get(
                 f"{settings.auth_service_url}{settings.auth_api_prefix}/me",
                 headers=headers,
-                cookies=request.cookies
+                cookies=request.cookies,
             )
 
             if response.status_code == 200:
                 try:
                     from app.utils.metrics import MetricsHelper
+
                     duration = time.time() - start_time
-                    MetricsHelper.record_auth_validation('auth_service', duration, True)
+                    MetricsHelper.record_auth_validation("auth_service", duration, True)
                 except ImportError:
                     pass
                 return response.json()
             else:
                 try:
                     from app.utils.metrics import MetricsHelper
+
                     duration = time.time() - start_time
-                    MetricsHelper.record_auth_validation('auth_service', duration, False, 'invalid_token')
+                    MetricsHelper.record_auth_validation(
+                        "auth_service", duration, False, "invalid_token"
+                    )
                 except ImportError:
                     pass
                 return None
@@ -198,8 +213,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.error(f"Error calling auth service for validation: {e}")
             try:
                 from app.utils.metrics import MetricsHelper
+
                 duration = time.time() - start_time
-                MetricsHelper.record_auth_validation('auth_service', duration, False, 'service_error')
+                MetricsHelper.record_auth_validation(
+                    "auth_service", duration, False, "service_error"
+                )
             except ImportError:
                 pass
             return None
@@ -207,8 +225,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.error(f"Unexpected error during auth validation: {e}")
             try:
                 from app.utils.metrics import MetricsHelper
+
                 duration = time.time() - start_time
-                MetricsHelper.record_auth_validation('auth_service', duration, False, 'validation_error')
+                MetricsHelper.record_auth_validation(
+                    "auth_service", duration, False, "validation_error"
+                )
             except ImportError:
                 pass
             return None
@@ -231,8 +252,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Try known access-token cookie names
         cookie_candidates = (
             settings.auth_access_cookie_name,
-            "access_token",      # legacy fallback
-            "goalixa_access",    # explicit fallback for local envs
+            "access_token",  # legacy fallback
+            "goalixa_access",  # explicit fallback for local envs
         )
         for cookie_name in cookie_candidates:
             access_token = request.cookies.get(cookie_name)
@@ -274,10 +295,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 # User is authenticated
                 request.state.authenticated = True
                 request.state.user = user_payload
-                logger.debug(f"User authenticated: {user_payload.get('user_id', 'unknown')}")
+                logger.debug(
+                    f"User authenticated: {user_payload.get('user_id', 'unknown')}"
+                )
             else:
                 # Authentication failed
-                return self._handle_unauthorized(request, path, call_next, token_expired=True)
+                return self._handle_unauthorized(
+                    request, path, call_next, token_expired=True
+                )
 
             response = await call_next(request)
             return response
@@ -292,7 +317,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         path: str,
         call_next: Optional[Callable] = None,
         token_expired: bool = False,
-        error: Optional[str] = None
+        error: Optional[str] = None,
     ):
         """
         Handle unauthorized requests
@@ -317,15 +342,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={
                     "error": "unauthorized",
-                    "message": "Authentication required" if not token_expired else "Session expired. Please login again.",
-                    "redirect_url": "/auth/login"
-                }
+                    "message": (
+                        "Authentication required"
+                        if not token_expired
+                        else "Session expired. Please login again."
+                    ),
+                    "redirect_url": "/auth/login",
+                },
             )
 
         # For browser navigation, redirect to login
         login_url = "/auth/login"
         logger.info(f"Redirecting unauthenticated browser request to {login_url}")
-        return RedirectResponse(
-            url=login_url,
-            status_code=status.HTTP_302_FOUND
-        )
+        return RedirectResponse(url=login_url, status_code=status.HTTP_302_FOUND)

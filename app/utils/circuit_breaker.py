@@ -2,6 +2,7 @@
 Circuit Breaker Pattern
 Prevents cascading failures by stopping requests to failing services
 """
+
 import asyncio
 import logging
 from enum import Enum
@@ -16,13 +17,15 @@ logger = logging.getLogger(__name__)
 
 class CircuitState(Enum):
     """Circuit breaker states"""
-    CLOSED = "closed"      # Normal operation, requests pass through
-    OPEN = "open"          # Circuit is open, requests fail fast
+
+    CLOSED = "closed"  # Normal operation, requests pass through
+    OPEN = "open"  # Circuit is open, requests fail fast
     HALF_OPEN = "half_open"  # Testing if service has recovered
 
 
 class CircuitBreakerOpenError(Exception):
     """Raised when circuit breaker is open"""
+
     pass
 
 
@@ -48,7 +51,7 @@ class CircuitBreaker:
         failure_threshold: int = 5,
         recovery_timeout: float = 60.0,
         expected_exception: Exception = Exception,
-        half_open_max_calls: int = 3
+        half_open_max_calls: int = 3,
     ):
         """
         Initialize circuit breaker
@@ -100,12 +103,15 @@ class CircuitBreaker:
         """Open the circuit"""
         self._state = CircuitState.OPEN
         self._last_failure_time = time.time()
-        logger.warning(f"Circuit breaker '{self.name}' opened after {self._failure_count} failures")
+        logger.warning(
+            f"Circuit breaker '{self.name}' opened after {self._failure_count} failures"
+        )
 
         # Record metrics
         try:
             from app.utils.metrics import MetricsHelper
-            MetricsHelper.record_circuit_breaker_state(self.name, 'open')
+
+            MetricsHelper.record_circuit_breaker_state(self.name, "open")
         except ImportError:
             pass  # Metrics not available in all contexts
 
@@ -120,7 +126,8 @@ class CircuitBreaker:
         # Record metrics
         try:
             from app.utils.metrics import MetricsHelper
-            MetricsHelper.record_circuit_breaker_state(self.name, 'closed')
+
+            MetricsHelper.record_circuit_breaker_state(self.name, "closed")
             MetricsHelper.record_circuit_breaker_success(self.name)
         except ImportError:
             pass
@@ -129,12 +136,15 @@ class CircuitBreaker:
         """Move to half-open state for testing"""
         self._state = CircuitState.HALF_OPEN
         self._half_open_calls = 0
-        logger.info(f"Circuit breaker '{self.name}' moved to half-open state for testing")
+        logger.info(
+            f"Circuit breaker '{self.name}' moved to half-open state for testing"
+        )
 
         # Record metrics
         try:
             from app.utils.metrics import MetricsHelper
-            MetricsHelper.record_circuit_breaker_state(self.name, 'half_open')
+
+            MetricsHelper.record_circuit_breaker_state(self.name, "half_open")
         except ImportError:
             pass
 
@@ -163,6 +173,7 @@ class CircuitBreaker:
                     # Record circuit breaker rejection
                     try:
                         from app.utils.metrics import MetricsHelper
+
                         MetricsHelper.record_circuit_breaker_rejected(self.name)
                     except ImportError:
                         pass
@@ -198,6 +209,7 @@ class CircuitBreaker:
             # Record success
             try:
                 from app.utils.metrics import MetricsHelper
+
                 MetricsHelper.record_circuit_breaker_success(self.name)
             except ImportError:
                 pass
@@ -223,6 +235,7 @@ class CircuitBreaker:
             # Record failure
             try:
                 from app.utils.metrics import MetricsHelper
+
                 MetricsHelper.record_circuit_breaker_failure(self.name)
             except ImportError:
                 pass
@@ -247,6 +260,7 @@ class CircuitBreaker:
             # Record failure
             try:
                 from app.utils.metrics import MetricsHelper
+
                 MetricsHelper.record_circuit_breaker_failure(self.name)
             except ImportError:
                 pass
@@ -259,9 +273,7 @@ _circuit_breakers: dict[str, CircuitBreaker] = {}
 
 
 def get_circuit_breaker(
-    service_name: str,
-    failure_threshold: int = 5,
-    recovery_timeout: float = 60.0
+    service_name: str, failure_threshold: int = 5, recovery_timeout: float = 60.0
 ) -> CircuitBreaker:
     """
     Get or create a circuit breaker for a service
@@ -278,16 +290,14 @@ def get_circuit_breaker(
         _circuit_breakers[service_name] = CircuitBreaker(
             name=service_name,
             failure_threshold=failure_threshold,
-            recovery_timeout=recovery_timeout
+            recovery_timeout=recovery_timeout,
         )
 
     return _circuit_breakers[service_name]
 
 
 def with_circuit_breaker(
-    service_name: str,
-    failure_threshold: int = 5,
-    recovery_timeout: float = 60.0
+    service_name: str, failure_threshold: int = 5, recovery_timeout: float = 60.0
 ):
     """
     Decorator to apply circuit breaker to a function
@@ -302,13 +312,12 @@ def with_circuit_breaker(
         async def call_auth_service():
             ...
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             breaker = get_circuit_breaker(
-                service_name,
-                failure_threshold,
-                recovery_timeout
+                service_name, failure_threshold, recovery_timeout
             )
             return await breaker.call(func, *args, **kwargs)
 
