@@ -87,25 +87,24 @@ jobs:
         with:
           driver: docker
 
+      - name: Test Harbor push with simple image
+        run: |
+          # Test with a simple alpine image first
+          docker pull alpine:latest
+          docker tag alpine:latest ${{ env.REGISTRY }}/${{ steps.config.outputs.repository }}:test
+          docker push ${{ env.REGISTRY }}/${{ steps.config.outputs.repository }}:test && echo "Simple push works!" || echo "Simple push failed!"
+
       - name: Build and push Docker image
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.config.outputs.repository }}:latest"
 
-          # Pull base image first to ensure layers are available
-          docker pull python:3.11-slim
-
-          # Test Harbor connectivity
-          curl -sk -u '${{ secrets.HARBOR_USERNAME }}:${{ secrets.HARBOR_PASSWORD }}' \
-            "https://harbor.goalixa.com/v2/${{ steps.config.outputs.repository }}/tags/list" || echo "Tags list failed but continuing..."
-
-          # Build using buildx with load (local image)
+          # Build using buildx with output to docker
           docker buildx build \
-            --load \
+            --output=type=docker \
             --tag ${IMAGE} \
-            --provenance=false \
             .
 
-          # Push using docker push (not buildx)
+          # Push
           docker push ${IMAGE}
 
       - name: Setup kubectl
