@@ -1,6 +1,7 @@
 """
 Shared HTTP Client for all routers
 """
+
 import httpx
 import logging
 

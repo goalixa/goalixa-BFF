@@ -1,6 +1,7 @@
 """
 Aggregate Router - Handles data aggregation from multiple services
 """
+
 from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 import httpx
@@ -17,9 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 async def fetch_from_service(
-    service_url: str,
-    request: Request,
-    service_name: str
+    service_url: str, request: Request, service_name: str
 ) -> Optional[Dict[str, Any]]:
     """
     Fetch data from a backend service using shared HTTP client
@@ -38,14 +37,13 @@ async def fetch_from_service(
             return None
 
         headers = {
-            k: v for k, v in request.headers.items()
-            if k.lower() not in ['host', 'content-length']
+            k: v
+            for k, v in request.headers.items()
+            if k.lower() not in ["host", "content-length"]
         }
 
         response = await get_http_client().get(
-            service_url,
-            headers=headers,
-            cookies=request.cookies
+            service_url, headers=headers, cookies=request.cookies
         )
 
         if response.status_code == 200:
@@ -71,7 +69,11 @@ async def get_dashboard_data(request: Request):
     """
     try:
         # Try to get from cache first
-        user_id = getattr(request.state, 'user', {}).get('user_id') if hasattr(request.state, 'user') else None
+        user_id = (
+            getattr(request.state, "user", {}).get("user_id")
+            if hasattr(request.state, "user")
+            else None
+        )
         cache_key = f"dashboard:{user_id or 'anonymous'}"
 
         if settings.redis_enabled:
@@ -92,8 +94,7 @@ async def get_dashboard_data(request: Request):
 
         # Fetch data from multiple endpoints in parallel
         tasks = [
-            fetch_from_service(url, request, name)
-            for name, url in service_endpoints
+            fetch_from_service(url, request, name) for name, url in service_endpoints
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -103,7 +104,7 @@ async def get_dashboard_data(request: Request):
             "status": "success",
             "data": {},
             "errors": [],
-            "timestamp": asyncio.get_event_loop().time()
+            "timestamp": asyncio.get_event_loop().time(),
         }
 
         service_names = [name for name, _ in service_endpoints]
@@ -114,11 +115,15 @@ async def get_dashboard_data(request: Request):
                 # Log the error and mark the service as failed
                 logger.error(f"Failed to fetch {service_name}: {result}")
                 failed_services.append(service_name)
-                response_data["data"][service_name] = None if service_name == "user" else []
+                response_data["data"][service_name] = (
+                    None if service_name == "user" else []
+                )
             elif result is None:
                 # Service returned None (error in fetch_from_service)
                 failed_services.append(service_name)
-                response_data["data"][service_name] = None if service_name == "user" else []
+                response_data["data"][service_name] = (
+                    None if service_name == "user" else []
+                )
             else:
                 # Success - add the data
                 response_data["data"][service_name] = result
@@ -139,7 +144,11 @@ async def get_dashboard_data(request: Request):
 
         # Cache the result (even partial results can be cached for a shorter time)
         if settings.redis_enabled:
-            cache_ttl = settings.cache_ttl_dashboard if response_data["status"] == "success" else 60
+            cache_ttl = (
+                settings.cache_ttl_dashboard
+                if response_data["status"] == "success"
+                else 60
+            )
             await set(cache_key, response_data, ttl=cache_ttl)
 
         return JSONResponse(response_data)
@@ -148,7 +157,7 @@ async def get_dashboard_data(request: Request):
         logger.error(f"Error aggregating dashboard data: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to aggregate dashboard data"
+            detail="Failed to aggregate dashboard data",
         )
 
 
@@ -162,45 +171,49 @@ async def get_timer_dashboard(request: Request):
         # Build query string from request parameters
         query_params = dict(request.query_params)
         query_string = "&".join(f"{k}={v}" for k, v in query_params.items())
-        url = f"{service_urls.APP_TIMER_DASHBOARD}?{query_string}" if query_string else service_urls.APP_TIMER_DASHBOARD
+        url = (
+            f"{service_urls.APP_TIMER_DASHBOARD}?{query_string}"
+            if query_string
+            else service_urls.APP_TIMER_DASHBOARD
+        )
 
         # Forward request to backend service
         if get_http_client() is None:
             logger.error("Shared HTTP client not initialized for timer dashboard")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service unavailable"
+                detail="Service unavailable",
             )
 
         headers = {
-            k: v for k, v in request.headers.items()
-            if k.lower() not in ['host', 'content-length']
+            k: v
+            for k, v in request.headers.items()
+            if k.lower() not in ["host", "content-length"]
         }
 
         response = await get_http_client().get(
-            url,
-            headers=headers,
-            cookies=request.cookies
+            url, headers=headers, cookies=request.cookies
         )
 
         if response.status_code == 200:
             # Return the backend response as-is
             return JSONResponse(
-                content=response.json(),
-                status_code=response.status_code
+                content=response.json(), status_code=response.status_code
             )
         else:
-            logger.error(f"Backend timer dashboard returned {response.status_code}: {response.text}")
+            logger.error(
+                f"Backend timer dashboard returned {response.status_code}: {response.text}"
+            )
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"Backend service error: {response.status_code}"
+                detail=f"Backend service error: {response.status_code}",
             )
 
     except httpx.RequestError as e:
         logger.error(f"Error fetching timer dashboard from backend: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Failed to reach backend service"
+            detail="Failed to reach backend service",
         )
     except HTTPException:
         raise
@@ -208,7 +221,7 @@ async def get_timer_dashboard(request: Request):
         logger.error(f"Unexpected error in timer dashboard: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch timer dashboard data"
+            detail="Failed to fetch timer dashboard data",
         )
 
 
@@ -227,20 +240,22 @@ async def get_planner_data(request: Request):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        return JSONResponse({
-            "status": "success",
-            "data": {
-                "habits": results[0] if results[0] else [],
-                "todos": results[1] if results[1] else [],
-                "goals": results[2] if results[2] else [],
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": {
+                    "habits": results[0] if results[0] else [],
+                    "todos": results[1] if results[1] else [],
+                    "goals": results[2] if results[2] else [],
+                },
             }
-        })
+        )
 
     except Exception as e:
         logger.error(f"Error aggregating planner data: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to aggregate planner data"
+            detail="Failed to aggregate planner data",
         )
 
 
@@ -259,20 +274,22 @@ async def get_reports_data(request: Request):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        return JSONResponse({
-            "status": "success",
-            "data": {
-                "summary": results[0] if results[0] else {},
-                "tasks": results[1] if results[1] else [],
-                "projects": results[2] if results[2] else [],
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": {
+                    "summary": results[0] if results[0] else {},
+                    "tasks": results[1] if results[1] else [],
+                    "projects": results[2] if results[2] else [],
+                },
             }
-        })
+        )
 
     except Exception as e:
         logger.error(f"Error aggregating reports data: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to aggregate reports data"
+            detail="Failed to aggregate reports data",
         )
 
 
@@ -291,18 +308,20 @@ async def get_overview_data(request: Request):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        return JSONResponse({
-            "status": "success",
-            "data": {
-                "user": results[0] if results[0] else None,
-                "tasks": results[1] if results[1] else [],
-                "summary": results[2] if results[2] else {},
+        return JSONResponse(
+            {
+                "status": "success",
+                "data": {
+                    "user": results[0] if results[0] else None,
+                    "tasks": results[1] if results[1] else [],
+                    "summary": results[2] if results[2] else {},
+                },
             }
-        })
+        )
 
     except Exception as e:
         logger.error(f"Error aggregating overview data: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to aggregate overview data"
+            detail="Failed to aggregate overview data",
         )

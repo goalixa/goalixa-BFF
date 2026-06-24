@@ -2,6 +2,7 @@
 Rate Limiting Middleware
 Protects against abuse by limiting request rate per client
 """
+
 from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -32,8 +33,8 @@ class InMemoryRateLimiter:
         Uses IP address, or user ID if available
         """
         # Try to get user_id from authenticated request
-        if hasattr(request.state, 'user') and request.state.user:
-            user_id = request.state.user.get('user_id')
+        if hasattr(request.state, "user") and request.state.user:
+            user_id = request.state.user.get("user_id")
             if user_id:
                 return f"user:{user_id}"
 
@@ -70,8 +71,7 @@ class InMemoryRateLimiter:
         # Remove old requests outside the time window
         window_start = current_time - settings.rate_limit_period
         self.requests[client_key] = [
-            timestamp for timestamp in request_history
-            if timestamp > window_start
+            timestamp for timestamp in request_history if timestamp > window_start
         ]
 
         # Check if under limit
@@ -150,23 +150,27 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 content={
                     "error": "Rate limit exceeded",
                     "message": f"Too many requests. Limit is {settings.rate_limit_requests} requests per {settings.rate_limit_period} seconds.",
-                    "retry_after": int(reset_time - time.time())
+                    "retry_after": int(reset_time - time.time()),
                 },
                 headers={
                     "Retry-After": str(int(reset_time - time.time())),
                     "X-RateLimit-Limit": str(settings.rate_limit_requests),
                     "X-RateLimit-Window": str(settings.rate_limit_period),
-                }
+                },
             )
 
         response = await call_next(request)
 
         # Add rate limit headers to response
         client_key = self.rate_limiter._get_client_key(request)
-        remaining = settings.rate_limit_requests - len(self.rate_limiter.requests.get(client_key, []))
+        remaining = settings.rate_limit_requests - len(
+            self.rate_limiter.requests.get(client_key, [])
+        )
 
         response.headers["X-RateLimit-Limit"] = str(settings.rate_limit_requests)
         response.headers["X-RateLimit-Remaining"] = str(max(0, remaining))
-        response.headers["X-RateLimit-Reset"] = str(int(self.rate_limiter.get_reset_time(request)))
+        response.headers["X-RateLimit-Reset"] = str(
+            int(self.rate_limiter.get_reset_time(request))
+        )
 
         return response

@@ -2,6 +2,7 @@
 Redis Caching Layer
 Provides caching functionality for frequently accessed data
 """
+
 import json
 import logging
 import hashlib
@@ -49,6 +50,7 @@ def generate_cache_key(prefix: str, *args, **kwargs) -> str:
 
     return f"{prefix}:{args_hash}"
 
+
 # Global Redis client
 redis_client = None
 
@@ -63,10 +65,9 @@ async def get_redis_client():
     if redis_client is None:
         try:
             import redis.asyncio as aioredis
+
             redis_client = await aioredis.from_url(
-                settings.redis_url,
-                encoding="utf-8",
-                decode_responses=True
+                settings.redis_url, encoding="utf-8", decode_responses=True
             )
             logger.info("Redis client initialized")
         except Exception as e:
@@ -207,9 +208,7 @@ async def delete_pattern(pattern: str) -> bool:
 
 
 def cached(
-    key_prefix: str,
-    ttl: Optional[int] = None,
-    key_func: Optional[Callable] = None
+    key_prefix: str, ttl: Optional[int] = None, key_func: Optional[Callable] = None
 ):
     """
     Decorator for caching function results
@@ -230,6 +229,7 @@ def cached(
         async def get_user_tasks(user_id: str):
             ...
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -286,7 +286,9 @@ class CacheMiddleware:
         logger.info(f"Invalidated cache for user: {user_id}")
 
     @staticmethod
-    async def invalidate_resource_cache(resource_type: str, resource_id: Optional[str] = None):
+    async def invalidate_resource_cache(
+        resource_type: str, resource_id: Optional[str] = None
+    ):
         """Invalidate cache for a specific resource type"""
         if resource_id:
             pattern = f"{resource_type}:{resource_id}:*"

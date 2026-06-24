@@ -2,6 +2,7 @@
 Goalixa BFF - Backend for Frontend
 A unified API layer for the Goalixa PWA
 """
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
@@ -24,114 +25,119 @@ from app import http_client as http_client_module
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 # Prometheus Metrics.
 # Request metrics
 REQUEST_COUNT = Counter(
-    'bff_request_count',
-    'Total request count',
-    ['method', 'endpoint', 'status']
+    "bff_request_count", "Total request count", ["method", "endpoint", "status"]
 )
 REQUEST_DURATION = Histogram(
-    'bff_request_duration_seconds',
-    'Request duration',
-    ['method', 'endpoint'],
-    buckets=(.005, .01, .025, .05, .075, .1, .25, .5, .75, 1.0, 2.5, 5.0, 7.5, 10.0, float('inf'))
+    "bff_request_duration_seconds",
+    "Request duration",
+    ["method", "endpoint"],
+    buckets=(
+        0.005,
+        0.01,
+        0.025,
+        0.05,
+        0.075,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        1.0,
+        2.5,
+        5.0,
+        7.5,
+        10.0,
+        float("inf"),
+    ),
 )
 
 # Authentication metrics
 AUTH_REQUESTS_TOTAL = Counter(
-    'bff_auth_requests_total',
-    'Total authentication requests',
-    ['method', 'endpoint', 'status']
+    "bff_auth_requests_total",
+    "Total authentication requests",
+    ["method", "endpoint", "status"],
 )
 AUTH_VALIDATION_DURATION = Histogram(
-    'bff_auth_validation_seconds',
-    'Authentication validation duration',
-    ['validation_type'],  # 'local_jwt' or 'auth_service'
-    buckets=(.001, .005, .01, .025, .05, .1, .25, .5, 1.0, float('inf'))
+    "bff_auth_validation_seconds",
+    "Authentication validation duration",
+    ["validation_type"],  # 'local_jwt' or 'auth_service'
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, float("inf")),
 )
 AUTH_FAILURES_TOTAL = Counter(
-    'bff_auth_failures_total',
-    'Total authentication failures',
-    ['failure_type']  # 'no_token', 'invalid_token', 'expired_token', 'service_error'
+    "bff_auth_failures_total",
+    "Total authentication failures",
+    ["failure_type"],  # 'no_token', 'invalid_token', 'expired_token', 'service_error'
 )
 
 # Backend service metrics
 BACKEND_REQUESTS_TOTAL = Counter(
-    'bff_backend_requests_total',
-    'Total backend service requests',
-    ['service', 'method', 'endpoint', 'status']
+    "bff_backend_requests_total",
+    "Total backend service requests",
+    ["service", "method", "endpoint", "status"],
 )
 BACKEND_REQUEST_DURATION = Histogram(
-    'bff_backend_request_duration_seconds',
-    'Backend service request duration',
-    ['service', 'endpoint'],
-    buckets=(.01, .05, .1, .25, .5, .75, 1.0, 2.5, 5.0, 10.0, float('inf'))
+    "bff_backend_request_duration_seconds",
+    "Backend service request duration",
+    ["service", "endpoint"],
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 10.0, float("inf")),
 )
 BACKEND_REQUESTS_IN_PROGRESS = Gauge(
-    'bff_backend_requests_in_progress',
-    'Number of backend requests in progress',
-    ['service']
+    "bff_backend_requests_in_progress",
+    "Number of backend requests in progress",
+    ["service"],
 )
 
 # Circuit breaker metrics
 CIRCUIT_BREAKER_STATE = Gauge(
-    'bff_circuit_breaker_state',
-    'Circuit breaker state (0=closed, 1=open, 2=half_open)',
-    ['service']
+    "bff_circuit_breaker_state",
+    "Circuit breaker state (0=closed, 1=open, 2=half_open)",
+    ["service"],
 )
 CIRCUIT_BREAKER_FAILURES_TOTAL = Counter(
-    'bff_circuit_breaker_failures_total',
-    'Total circuit breaker failures',
-    ['service']
+    "bff_circuit_breaker_failures_total", "Total circuit breaker failures", ["service"]
 )
 CIRCUIT_BREAKER_SUCCESS_TOTAL = Counter(
-    'bff_circuit_breaker_success_total',
-    'Total circuit breaker successes',
-    ['service']
+    "bff_circuit_breaker_success_total", "Total circuit breaker successes", ["service"]
 )
 CIRCUIT_BREAKER_REJECTED_TOTAL = Counter(
-    'bff_circuit_breaker_rejected_total',
-    'Total requests rejected by circuit breaker',
-    ['service']
+    "bff_circuit_breaker_rejected_total",
+    "Total requests rejected by circuit breaker",
+    ["service"],
 )
 
 # Cache metrics
 CACHE_REQUESTS_TOTAL = Counter(
-    'bff_cache_requests_total',
-    'Total cache requests',
-    ['operation', 'status']  # operation: 'hit' or 'miss'
+    "bff_cache_requests_total",
+    "Total cache requests",
+    ["operation", "status"],  # operation: 'hit' or 'miss'
 )
 CACHE_DURATION = Histogram(
-    'bff_cache_operation_seconds',
-    'Cache operation duration',
-    ['operation'],
-    buckets=(.0001, .0005, .001, .005, .01, .025, .05, .1, float('inf'))
+    "bff_cache_operation_seconds",
+    "Cache operation duration",
+    ["operation"],
+    buckets=(0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, float("inf")),
 )
 
 # Rate limiting metrics
 RATE_LIMIT_REQUESTS_TOTAL = Counter(
-    'bff_rate_limit_requests_total',
-    'Total rate limit checks',
-    ['status']  # 'allowed' or 'blocked'
+    "bff_rate_limit_requests_total",
+    "Total rate limit checks",
+    ["status"],  # 'allowed' or 'blocked'
 )
 
 # Error metrics
 ERRORS_TOTAL = Counter(
-    'bff_errors_total',
-    'Total errors encountered',
-    ['error_type', 'endpoint']
+    "bff_errors_total", "Total errors encountered", ["error_type", "endpoint"]
 )
 
 # Application info
-APP_INFO = Info(
-    'bff_build_info',
-    'BFF build information'
-)
+APP_INFO = Info("bff_build_info", "BFF build information")
 
 # HTTP Async Client for backend services
 http_client = None
@@ -146,10 +152,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Goalixa BFF...")
 
     # Initialize application info
-    APP_INFO.info({
-        'version': '1.0.0',
-        'environment': settings.environment
-    })
+    APP_INFO.info({"version": "1.0.0", "environment": settings.environment})
 
     # Initialize Redis if enabled
     if settings.redis_enabled:
@@ -160,14 +163,12 @@ async def lifespan(app: FastAPI):
     limits = httpx.Limits(
         max_keepalive_connections=settings.http_max_keepalive_connections,
         max_connections=settings.http_max_connections,
-        keepalive_expiry=settings.http_keepalive_expiry
+        keepalive_expiry=settings.http_keepalive_expiry,
     )
     timeout = httpx.Timeout(settings.request_timeout, connect=settings.connect_timeout)
 
     http_client = httpx.AsyncClient(
-        limits=limits,
-        timeout=timeout,
-        verify=settings.http_verify_tls
+        limits=limits, timeout=timeout, verify=settings.http_verify_tls
     )
 
     logger.info(
@@ -203,7 +204,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS Middleware
@@ -255,6 +256,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(app_router.router, prefix="/app", tags=["App"])
 app.include_router(aggregate.router, prefix="/aggregate", tags=["Aggregate"])
 
+
 # Metrics endpoint for Prometheus scraping
 @app.get("/metrics")
 async def metrics():
@@ -275,8 +277,8 @@ async def root():
             "auth": "/auth/*",
             "app": "/app/*",
             "aggregate": "/aggregate/*",
-            "metrics": "/metrics"
-        }
+            "metrics": "/metrics",
+        },
     }
 
 
@@ -287,9 +289,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
 
     REQUEST_COUNT.labels(
-        method=request.method,
-        endpoint=request.url.path,
-        status=500
+        method=request.method, endpoint=request.url.path, status=500
     ).inc()
 
     return JSONResponse(
@@ -297,8 +297,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": "Internal server error",
             "message": "An unexpected error occurred. Please try again later.",
-            "detail": str(exc) if settings.debug else None
-        }
+            "detail": str(exc) if settings.debug else None,
+        },
     )
 
 
@@ -312,15 +312,12 @@ async def metrics_middleware(request: Request, call_next):
 
     # Record metrics
     duration = time.time() - start_time
-    REQUEST_DURATION.labels(
-        method=request.method,
-        endpoint=request.url.path
-    ).observe(duration)
+    REQUEST_DURATION.labels(method=request.method, endpoint=request.url.path).observe(
+        duration
+    )
 
     REQUEST_COUNT.labels(
-        method=request.method,
-        endpoint=request.url.path,
-        status=response.status_code
+        method=request.method, endpoint=request.url.path, status=response.status_code
     ).inc()
 
     return response
@@ -342,10 +339,5 @@ async def shutdown_event():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

@@ -2,6 +2,7 @@
 Logging Middleware
 Logs all incoming requests and outgoing responses
 """
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 import logging
@@ -29,7 +30,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "path": request.url.path,
                 "query_params": str(request.query_params),
                 "client": request.client.host if request.client else None,
-            }
+            },
         )
 
         # Process request
@@ -46,7 +47,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "path": request.url.path,
                 "status_code": response.status_code,
                 "duration_ms": round(duration * 1000, 2),
-            }
+            },
         )
 
         return response

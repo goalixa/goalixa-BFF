@@ -1,6 +1,7 @@
 """
 App Router - Handles all app-related requests
 """
+
 from fastapi import APIRouter, Request, HTTPException, status, Response
 from fastapi.responses import JSONResponse
 import httpx
@@ -17,17 +18,11 @@ logger = logging.getLogger(__name__)
 
 # Initialize circuit breaker for app service
 app_service_breaker = get_circuit_breaker(
-    "app-service",
-    failure_threshold=5,
-    recovery_timeout=30.0
+    "app-service", failure_threshold=5, recovery_timeout=30.0
 )
 
 
-async def forward_request(
-    request: Request,
-    service_url: str,
-    method: str = None
-):
+async def forward_request(request: Request, service_url: str, method: str = None):
     """
     Generic request forwarding function using shared HTTP client
 
@@ -39,6 +34,7 @@ async def forward_request(
     Returns:
         JSONResponse from backend service
     """
+
     async def _do_request():
         http_method = method or request.method
         start_time = time.time()
@@ -46,12 +42,17 @@ async def forward_request(
         # Track in-progress requests
         try:
             from app.main import BACKEND_REQUESTS_IN_PROGRESS
-            BACKEND_REQUESTS_IN_PROGRESS.labels(service='app-service').inc()
+
+            BACKEND_REQUESTS_IN_PROGRESS.labels(service="app-service").inc()
         except ImportError:
             pass
 
         try:
-            body = await request.body() if http_method in ["POST", "PUT", "PATCH"] else None
+            body = (
+                await request.body()
+                if http_method in ["POST", "PUT", "PATCH"]
+                else None
+            )
 
             # Build URL with query parameters
             url = service_url
@@ -60,8 +61,9 @@ async def forward_request(
 
             # Filter headers - remove host and content-length
             headers = {
-                k: v for k, v in request.headers.items()
-                if k.lower() not in ['host', 'content-length']
+                k: v
+                for k, v in request.headers.items()
+                if k.lower() not in ["host", "content-length"]
             }
 
             # Use shared HTTP client from main app
@@ -69,7 +71,7 @@ async def forward_request(
                 logger.error("Shared HTTP client not initialized")
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Service not properly initialized"
+                    detail="Service not properly initialized",
                 )
 
             response = await get_http_client().request(
@@ -77,19 +79,20 @@ async def forward_request(
                 url=url,
                 content=body,
                 headers=headers,
-                cookies=request.cookies
+                cookies=request.cookies,
             )
 
             # Record metrics
             try:
                 from app.utils.metrics import MetricsHelper
+
                 duration = time.time() - start_time
                 MetricsHelper.record_backend_request(
-                    service='app-service',
+                    service="app-service",
                     method=http_method,
                     endpoint=request.url.path,
                     status_code=response.status_code,
-                    duration=duration
+                    duration=duration,
                 )
             except ImportError:
                 pass
@@ -104,16 +107,14 @@ async def forward_request(
             except Exception:
                 content = {"raw_content": response.text} if response.text else None
 
-            return JSONResponse(
-                status_code=response.status_code,
-                content=content
-            )
+            return JSONResponse(status_code=response.status_code, content=content)
 
         finally:
             # Decrement in-progress requests
             try:
                 from app.main import BACKEND_REQUESTS_IN_PROGRESS
-                BACKEND_REQUESTS_IN_PROGRESS.labels(service='app-service').dec()
+
+                BACKEND_REQUESTS_IN_PROGRESS.labels(service="app-service").dec()
             except ImportError:
                 pass
 
@@ -125,29 +126,36 @@ async def forward_request(
         logger.warning("Circuit breaker is open - app service unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="App service temporarily unavailable. Please try again later."
+            detail="App service temporarily unavailable. Please try again later.",
         )
     except httpx.RequestError as e:
         logger.error(f"App service connection error: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="App service unavailable"
+            detail="App service unavailable",
         )
     except httpx.HTTPStatusError as e:
         logger.error(f"App service returned error status: {e.response.status_code}")
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=e.response.json() if e.response.headers.get("content-type", "").startswith("application/json") else str(e.response.text)
+            detail=(
+                e.response.json()
+                if e.response.headers.get("content-type", "").startswith(
+                    "application/json"
+                )
+                else str(e.response.text)
+            ),
         )
     except Exception as e:
         logger.error(f"Unexpected error in forward_request: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
+            detail="Internal server error",
         )
 
 
 # ============= TASKS =============
+
 
 @router.get("/tasks")
 async def get_tasks(request: Request):
@@ -174,16 +182,19 @@ async def start_task(task_id: str, request: Request):
     url = f"{service_urls.APP_TASK_START}/{task_id}/start"
     return await forward_request(request, url)
 
+
 @router.post("/tasks/{task_id}/reopen")
 async def reopen_task(task_id: str, request: Request):
     """Reopen a completed task"""
     url = f"{service_urls.APP_TASK_REOPEN}/{task_id}/reopen"
     return await forward_request(request, url)
 
+
 @router.post("/daily-target")
 async def set_daily_target(request: Request):
     """Set daily target"""
     return await forward_request(request, service_urls.APP_DAILY_TARGET)
+
 
 @router.post("/tasks/{task_id}/stop")
 async def stop_task(task_id: str, request: Request):
@@ -222,6 +233,7 @@ async def bulk_task_action(request: Request):
 
 # ============= PROJECTS =============
 
+
 @router.get("/projects")
 async def get_projects(request: Request):
     """Get all projects"""
@@ -249,6 +261,7 @@ async def delete_project(project_id: str, request: Request):
 
 
 # ============= GOALS =============
+
 
 @router.get("/goals")
 async def get_goals(request: Request):
@@ -293,11 +306,14 @@ async def toggle_subgoal(subgoal_id: str, request: Request):
 @router.post("/goals/{goal_id}/subgoals")
 async def add_goal_subgoal(goal_id: str, request: Request):
     """Add a subgoal to a goal"""
-    url = f"{settings.app_service_url}{settings.app_api_prefix}/goals/{goal_id}/subgoals"
+    url = (
+        f"{settings.app_service_url}{settings.app_api_prefix}/goals/{goal_id}/subgoals"
+    )
     return await forward_request(request, url)
 
 
 # ============= HABITS =============
+
 
 @router.get("/habits")
 async def get_habits(request: Request):
@@ -341,6 +357,7 @@ async def delete_habit(habit_id: str, request: Request):
 
 # ============= TODOS =============
 
+
 @router.get("/todos")
 async def get_todos(request: Request):
     """Get all todos"""
@@ -368,6 +385,7 @@ async def delete_todo(todo_id: str, request: Request):
 
 
 # ============= REMINDERS =============
+
 
 @router.get("/account")
 async def get_account(request: Request):
@@ -410,6 +428,7 @@ async def delete_reminder(reminder_id: str, request: Request):
 
 # ============= LABELS =============
 
+
 @router.get("/labels")
 async def get_labels(request: Request):
     """Get all labels"""
@@ -439,34 +458,47 @@ async def delete_label(label_id: str, request: Request):
 @router.get("/planner")
 async def get_planner(request: Request):
     """Get planner data"""
-    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/planner")
+    return await forward_request(
+        request, f"{settings.app_service_url}{settings.app_api_prefix}/planner"
+    )
 
 
 @router.get("/weekly-goals")
 async def get_weekly_goals(request: Request):
     """Get weekly goals"""
-    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals")
+    return await forward_request(
+        request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals"
+    )
 
 
 @router.post("/weekly-goals")
 async def create_weekly_goal(request: Request):
     """Create a new weekly goal"""
-    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals")
+    return await forward_request(
+        request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals"
+    )
 
 
 @router.post("/weekly-goals/{goal_id}/toggle")
 async def toggle_weekly_goal(goal_id: str, request: Request):
     """Toggle weekly goal completion"""
-    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals/{goal_id}/toggle")
+    return await forward_request(
+        request,
+        f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals/{goal_id}/toggle",
+    )
 
 
 @router.post("/weekly-goals/{goal_id}/delete")
 async def delete_weekly_goal(goal_id: str, request: Request):
     """Delete a weekly goal"""
-    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals/{goal_id}/delete")
+    return await forward_request(
+        request,
+        f"{settings.app_service_url}{settings.app_api_prefix}/weekly-goals/{goal_id}/delete",
+    )
 
 
 # ============= REPORTS =============
+
 
 @router.get("/reports/summary")
 async def get_reports_summary(request: Request):
@@ -475,6 +507,7 @@ async def get_reports_summary(request: Request):
 
 
 # ============= TIMER =============
+
 
 @router.get("/timer")
 async def get_timer(request: Request):
@@ -496,13 +529,17 @@ async def get_timer_dashboard(request: Request):
 
 # ============= CALENDAR =============
 
+
 @router.get("/calendar/board")
 async def get_calendar_board(request: Request):
     """Get calendar board data"""
-    return await forward_request(request, f"{settings.app_service_url}{settings.app_api_prefix}/calendar/board")
+    return await forward_request(
+        request, f"{settings.app_service_url}{settings.app_api_prefix}/calendar/board"
+    )
 
 
 # ============= SETTINGS =============
+
 
 @router.get("/settings/profile")
 async def get_profile(request: Request):
@@ -535,6 +572,7 @@ async def update_notification_settings(request: Request):
 
 
 # ===== DAILY FOCUS ROUTES =====
+
 
 @router.get("/daily-focus")
 async def get_daily_focus(request: Request):
